@@ -1,122 +1,204 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+
+import { useEffect, useState } from "react";
+import { api, type ShoppingList } from "./services/api";
+import "./App.css";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [lists, setLists] = useState<ShoppingList[]>([]);
+  const [listName, setListName] = useState("");
+  const [itemNames, setItemNames] = useState<
+    Record<number, string>
+  >({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function loadLists() {
+    try {
+      setError("");
+      const data = await api.getLists();
+      setLists(data);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Connection failed"
+      );
+    }
+  }
+
+  useEffect(() => {
+    void loadLists();
+  }, []);
+
+  async function createList() {
+    if (!listName.trim()) return;
+
+    setLoading(true);
+    try {
+      await api.createList(listName.trim());
+      setListName("");
+      await loadLists();
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function addItem(listId: number) {
+    const name = itemNames[listId]?.trim();
+    if (!name) return;
+
+    try {
+      await api.addItem(listId, name);
+      setItemNames((prev) => ({
+        ...prev,
+        [listId]: "",
+      }));
+      await loadLists();
+    } catch (err) {
+      setError(String(err));
+    }
+  }
+
+  async function toggleItem(
+    itemId: number,
+    completed: boolean
+  ) {
+    try {
+      await api.updateItem(itemId, { completed: !completed });
+      await loadLists();
+    } catch (err) {
+      setError(String(err));
+    }
+  }
+
+  async function deleteItem(itemId: number) {
+    try {
+      await api.deleteItem(itemId);
+      await loadLists();
+    } catch (err) {
+      setError(String(err));
+    }
+  }
+
+  async function deleteList(listId: number) {
+    if (!window.confirm("Delete this shopping list?")) return;
+
+    try {
+      await api.deleteList(listId);
+      await loadLists();
+    } catch (err) {
+      setError(String(err));
+    }
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
+    <main className="app">
+      <header>
+        <h1>🥬 Fridge Scan</h1>
+        <p>Smart fridge inventory & shopping lists</p>
+      </header>
+
+      <section className="panel">
+        <h2>Create Shopping List</h2>
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void createList();
+          }}
         >
-          Count is {count}
-        </button>
+          <input
+            value={listName}
+            onChange={(e) => setListName(e.target.value)}
+            placeholder="Example: Weekly Groceries"
+            maxLength={100}
+            required
+          />
+          <button disabled={loading} type="submit">
+            {loading ? "Saving..." : "Create List"}
+          </button>
+        </form>
       </section>
 
-      <div className="ticks"></div>
+      {error && (
+        <div role="alert" className="error">
+          {error}
+          <button onClick={() => setError("")}>Dismiss</button>
+        </div>
+      )}
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
+      <section className="panel">
+        <h2>My Shopping Lists</h2>
+
+        {lists.length === 0 && (
+          <p>No shopping lists yet. Create your first list.</p>
+        )}
+
+        {lists.map((list) => (
+          <article className="list-card" key={list.id}>
+            <div className="list-header">
+              <h3>{list.name}</h3>
+              <button
+                className="danger"
+                onClick={() => void deleteList(list.id)}
+              >
+                Delete List
+              </button>
+            </div>
+
+            {list.items.map((item) => (
+              <div className="shopping-item" key={item.id}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={item.completed}
+                    onChange={() =>
+                      void toggleItem(
+                        item.id,
+                        item.completed
+                      )
+                    }
+                  />
+                  <span className={
+                    item.completed ? "completed" : ""
+                  }>
+                    {item.name} × {item.quantity}
+                  </span>
+                </label>
+
+                <button
+                  className="danger"
+                  onClick={() => void deleteItem(item.id)}
                 >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
+                  Remove
+                </button>
+              </div>
+            ))}
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void addItem(list.id);
+              }}
+            >
+              <input
+                placeholder="Add an item"
+                value={itemNames[list.id] || ""}
+                onChange={(e) =>
+                  setItemNames((prev) => ({
+                    ...prev,
+                    [list.id]: e.target.value,
+                  }))
+                }
+                required
+              />
+              <button type="submit">Add Item</button>
+            </form>
+          </article>
+        ))}
       </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+    </main>
+  );
 }
 
-export default App
+export default App;
