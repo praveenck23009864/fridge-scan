@@ -1,9 +1,30 @@
 
 import { useEffect, useState } from "react";
-import { api, type ShoppingList } from "./services/api";
-import "./App.css";
 
+import { api, type ShoppingList } from "./services/api";
+import {
+  analyzeFridgePhotos,
+  type AIAnalysisResponse,
+} from "./services/api";
+import CameraCapture, {
+  type FridgePhoto,
+} from "./components/CameraCapture";
+
+import ScanReview from "./components/ScanReview";
+
+import "./App.css";
 function App() {
+  const [photoConsent, setPhotoConsent] = useState(false);
+  const [reviewVersion, setReviewVersion] = useState(0);
+  const [reviewDirty, setReviewDirty] = useState(false);
+  const [reviewBusy, setReviewBusy] = useState(false);
+  const [mockMode, setMockMode] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysis, setAnalysis] =
+    useState<AIAnalysisResponse | null>(null);
+  const [analysisError, setAnalysisError] = useState("");
+  const [fridgePhotos, setFridgePhotos] =
+    useState<FridgePhoto[]>([]);
   const [lists, setLists] = useState<ShoppingList[]>([]);
   const [listName, setListName] = useState("");
   const [itemNames, setItemNames] = useState<
@@ -11,7 +32,29 @@ function App() {
   >({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  async function runAnalysis() {
+    if (reviewDirty && !window.confirm("Discard unsaved review changes when the new analysis succeeds?")) return;
+    setAnalyzing(true);
+    setAnalysisError("");
 
+    try {
+      const result = await analyzeFridgePhotos(
+        fridgePhotos.map((photo) => photo.file),
+        photoConsent
+      );
+
+      setAnalysis(result);
+      setReviewVersion((version) => version + 1);
+    } catch (err) {
+      setAnalysisError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong"
+      );
+    } finally {
+      setAnalyzing(false);
+    }
+  }
   async function loadLists() {
     try {
       setError("");
@@ -25,7 +68,19 @@ function App() {
   }
 
   useEffect(() => {
-    void loadLists();
+    let active = true;
+    void api.getLists().then(
+      (data) => { if (active) setLists(data); },
+      (err: unknown) => {
+        if (active) {
+          setError(err instanceof Error ? err.message : "Connection failed");
+        }
+      }
+    );
+    void api.health().then((health) => {
+      if (active) setMockMode(health.mock_vision);
+    }).catch(() => { /* Recognition errors remain visible on analyze. */ });
+    return () => { active = false; };
   }, []);
 
   async function createList() {
@@ -94,9 +149,71 @@ function App() {
   return (
     <main className="app">
       <header>
+
         <h1>🥬 Fridge Scan</h1>
         <p>Smart fridge inventory & shopping lists</p>
       </header>
+      <CameraCapture onPhotosChange={setFridgePhotos} />
+
+      {fridgePhotos.length > 0 && (
+        <div className="camera-status">
+          <p>
+            ✅ {fridgePhotos.length} fridge photo(s)
+            ready for AI analysis.
+          </p>
+        </div>
+      )}
+
+      <section className="panel">
+        <h2>Analyze Fridge Photos</h2>
+        {mockMode && <p className="mock-banner" role="note"><strong>Development mock mode is enabled.</strong> Analysis returns sample foods without contacting OpenRouter.</p>}
+
+        <label>
+          <input
+            type="checkbox"
+            checked={photoConsent}
+            onChange={(e) => {
+              setPhotoConsent(e.target.checked);
+            }}
+          />
+          I consent to processing these photos for food recognition
+          {mockMode ? " locally in development mock mode." : " using the AI provider."}
+        </label>
+
+        <p>
+          Photos are processed for recognition and are
+          not saved by this endpoint. The AI provider's
+          retention policy may still apply.
+        </p>
+
+        <button
+          type="button"
+          disabled={
+            fridgePhotos.length === 0 ||
+            !photoConsent ||
+            analyzing || reviewBusy
+          }
+          onClick={() => void runAnalysis()}
+        >
+          {analyzing ? "Analyzing..." : mockMode ? "Analyze with development mock" : "Analyze with AI"}
+        </button>
+
+        {analysisError && (
+          <p role="alert" className="error">
+            {analysisError}
+          </p>
+        )}
+
+      </section>
+
+      <ScanReview
+        key={reviewVersion}
+        analysis={analysis}
+        disabled={analyzing}
+        onDirtyChange={setReviewDirty}
+        onBusyChange={setReviewBusy}
+        onShoppingListCreated={(list) => setLists((previous) => [list, ...previous.filter((entry) => entry.id !== list.id)])}
+      />
 
       <section className="panel">
         <h2>Create Shopping List</h2>
@@ -137,7 +254,7 @@ function App() {
         {lists.map((list) => (
           <article className="list-card" key={list.id}>
             <div className="list-header">
-              <h3>{list.name}</h3>
+              <h3>{list.is_mock && <span className="mock-label">DEMO ? </span>}{list.name}</h3>
               <button
                 className="danger"
                 onClick={() => void deleteList(list.id)}

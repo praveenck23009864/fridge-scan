@@ -1,18 +1,99 @@
+from datetime import datetime
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, StringConstraints, model_validator
 
-class ItemCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=100)
-    stock_status: str = "unknown"
+FoodName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
+StockStatus = Literal['low', 'available', 'unknown']
+
+
+class ShoppingListCreate(BaseModel):
+    name: FoodName
+
+
+class ShoppingItemCreate(BaseModel):
+    name: FoodName
+    quantity: int = Field(default=1, ge=1)
+
+
+class NonNullUpdate(BaseModel):
+    @model_validator(mode='before')
+    @classmethod
+    def reject_nulls(cls, values):
+        if isinstance(values, dict) and any(value is None for value in values.values()):
+            raise ValueError('Update fields cannot be null')
+        return values
+
+
+class ShoppingItemUpdate(NonNullUpdate):
+    name: FoodName | None = None
+    quantity: int | None = Field(default=None, ge=1)
+    completed: bool | None = None
+
+
+class ShoppingItemResponse(BaseModel):
+    id: int
+    shopping_list_id: int
+    name: str
+    quantity: int
+    completed: bool
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ShoppingListResponse(BaseModel):
+    id: int
+    name: str
+    source_scan_id: int | None = None
+    is_mock: bool = False
+    items: list[ShoppingItemResponse]
+    model_config = ConfigDict(from_attributes=True)
+
+
+class FoodItemFields(BaseModel):
+    name: FoodName
+    stock_status: StockStatus = 'unknown'
+
+
+class ItemCreate(FoodItemFields):
     confirmed: bool = False
 
-class ItemUpdate(BaseModel):
-    name: str | None = None
-    stock_status: str | None = None
+
+class ItemUpdate(NonNullUpdate):
+    name: FoodName | None = None
+    stock_status: StockStatus | None = None
     confirmed: bool | None = None
+
 
 class ItemResponse(ItemCreate):
     id: int
     scan_id: int
-
     model_config = ConfigDict(from_attributes=True)
+
+
+class ScanCreate(BaseModel):
+    is_mock: bool = False
+    model_used: str | None = Field(default=None, max_length=200)
+
+
+class ScanResponse(ScanCreate):
+    id: int
+    status: str
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ReviewedItem(FoodItemFields):
+    id: int | None = Field(default=None, gt=0)
+    confirmed: Literal[True]
+
+
+class ReviewSave(BaseModel):
+    # Complete confirmed snapshot; omissions are removed in the same transaction.
+    items: list[ReviewedItem] = Field(max_length=200)
+
+    @model_validator(mode='after')
+    def unique_ids(self):
+        ids = [item.id for item in self.items if item.id is not None]
+        if len(ids) != len(set(ids)):
+            raise ValueError('Duplicate item IDs in review')
+        return self

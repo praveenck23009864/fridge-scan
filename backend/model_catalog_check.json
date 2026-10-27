@@ -1,0 +1,157 @@
+[
+  {
+    "id": "nvidia/nemotron-3.5-super-vl:free",
+    "inputs": [
+      "text",
+      "image",
+      "video"
+    ],
+    "pricing": {
+      "prompt": "0",
+      "completion": "0"
+    }
+  },
+  {
+    "id": "dots-studio/dots-3-note-preview:free",
+    "inputs": [
+      "text",
+      "image"
+    ],
+    "pricing": {
+      "prompt": "0",
+      "completion": "0"
+    }
+  },
+  {
+    "id": "thinkingmachines/inkling-small:free",
+    "inputs": [
+      "text",
+      "image",
+      "audio"
+    ],
+    "pricing": {
+      "prompt": "0",
+      "completion": "0"
+    }
+  },
+  {
+    "id": "thinkingmachines/inkling:free",
+    "inputs": [
+      "text",
+      "image",
+      "audio"
+    ],
+    "pricing": {
+      "prompt": "0",
+      "completion": "0"
+    }
+  },
+  {
+    "id": "nvidia/nemotron-3.5-content-safety:free",
+    "inputs": [
+      "text",
+      "image"
+    ],
+    "pricing": {
+      "prompt": "0",
+      "completion": "0"
+    }
+  },
+  {
+    "id": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+    "inputs": [
+      "text",
+      "audio",
+      "image",
+      "video"
+    ],
+    "pricing": {
+      "prompt": "0",
+      "completion": "0"
+    }
+  },
+  {
+    "id": "google/gemma-4-26b-a4b-it:free",
+    "inputs": [
+      "image",
+      "text",
+      "video"
+    ],
+    "pricing": {
+      "prompt": "0",
+      "completion": "0"
+    }
+  },
+  {
+    "id": "google/gemma-4-31b-it:free",
+    "inputs": [
+      "image",
+      "text",
+      "video"
+    ],
+    "pricing": {
+      "prompt": "0",
+      "completion": "0"
+    }
+  },
+  {
+    "id": "google/gemini-3-flash-preview",
+    "inputs": [
+      "text",
+      "image",
+      "file",
+      "audio",
+      "video"
+    ],
+    "pricing": {
+      "prompt": "0.0000005",
+      "completion": "0.000003",
+      "image": "0.0000005",
+      "audio": "0.000001",
+      "input_audio_cache": "0.0000001",
+      "web_search": "0.014",
+      "internal_reasoning": "0.000003",
+      "input_cache_read": "0.00000005",
+      "input_cache_write": "0.0000000833333333333333"
+    }
+  },
+  {
+    "id": "qwen/qwen3-vl-8b-instruct",
+    "inputs": [
+      "image",
+      "text"
+    ],
+    "pricing": {
+      "prompt": "0.00000025",
+      "completion": "0.00000075",
+      "input_cache_read": "0.00000012"
+    }
+  },
+  {
+    "id": "openai/gpt-4.1-mini",
+    "inputs": [
+      "image",
+      "text",
+      "file"
+    ],
+    "pricing": {
+      "prompt": "0.0000004",
+      "completion": "0.0000016",
+      "web_search": "0.01",
+      "input_cache_read": "0.0000001"
+    }
+  },
+  {
+    "id": "openai/gpt-4o-mini",
+    "inputs": [
+      "text",
+      "image",
+      "file"
+    ],
+    "pricing": {
+      "prompt": "0.00000015",
+      "completion": "0.0000006",
+      "input_cache_read": "0.000000075"
+    }
+  }
+]
