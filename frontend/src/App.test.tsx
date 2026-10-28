@@ -2,18 +2,20 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "./App";
-import { api, analyzeFridgePhotos } from "./services/api";
+import { api, analyzeFridgePhotos, getFridgeSuggestions } from "./services/api";
 
 vi.mock("./services/api", () => ({
   analyzeFridgePhotos: vi.fn(),
+  getFridgeSuggestions: vi.fn().mockResolvedValue({scan_id:null,is_mock:false,items:[]}),
   api: { getLists: vi.fn(), getScans: vi.fn(), health: vi.fn() },
 }));
 
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(getFridgeSuggestions).mockResolvedValue({scan_id:null,is_mock:false,items:[]});
   vi.mocked(api.getLists).mockResolvedValue([]);
   vi.mocked(api.getScans).mockResolvedValue([]);
-  vi.mocked(api.health).mockResolvedValue({ status: "success", database: "SQLite", ai: "OpenRouter", mock_vision: false });
+  vi.mocked(api.health).mockResolvedValue({ status: "success", database: "SQLite", ai: "GroqCloud", mock_vision: false });
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, blob: async () => new Blob(["sample"], { type: "image/jpeg" }) }));
   vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: vi.fn(() => "blob:sample"), revokeObjectURL: vi.fn() }));
   vi.spyOn(window, "confirm").mockReturnValue(true);

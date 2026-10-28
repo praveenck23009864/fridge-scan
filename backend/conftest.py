@@ -43,3 +43,17 @@ def pytest_sessionfinish(session, exitstatus):
     from database import engine
     engine.dispose()
     _test_database.cleanup()
+
+# These are manual paid-network scripts, not automated tests.
+collect_ignore = ['test_groq.py', 'test_groq_vision.py']
+
+
+@pytest.fixture(autouse=True)
+def prohibit_live_network(monkeypatch):
+    import httpx
+    def blocked(*args, **kwargs):
+        pytest.fail('Automated tests must use mocked network responses')
+    async def blocked_async(*args, **kwargs):
+        blocked()
+    monkeypatch.setattr(httpx.HTTPTransport, 'handle_request', blocked)
+    monkeypatch.setattr(httpx.AsyncHTTPTransport, 'handle_async_request', blocked_async)

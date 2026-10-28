@@ -6,7 +6,7 @@ export type FridgePhoto = {
   id: string;
   file: File;
   previewUrl: string;
-  source: "camera" | "sample";
+  source: "camera" | "sample" | "upload";
 };
 
 type Props = {
@@ -26,6 +26,8 @@ export default function CameraCapture({
 }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const operationRef = useRef(0);
+  const mountedRef = useRef(true);
   const photosRef = useRef<FridgePhoto[]>([]);
 
   const [photos, setPhotos] = useState<FridgePhoto[]>([]);
@@ -40,6 +42,7 @@ export default function CameraCapture({
   }, [photos, onPhotosChange]);
 
   function stopCamera() {
+    operationRef.current += 1;
     streamRef.current?.getTracks().forEach(
       (track) => track.stop()
     );
@@ -55,7 +58,10 @@ export default function CameraCapture({
   }
 
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
+      operationRef.current += 1;
       streamRef.current?.getTracks().forEach(
         (track) => track.stop()
       );
@@ -81,6 +87,7 @@ export default function CameraCapture({
     try {
       stopCamera();
 
+      const operation = operationRef.current;
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: false,
         video: {
@@ -90,6 +97,10 @@ export default function CameraCapture({
         },
       });
 
+      if (!mountedRef.current || operation !== operationRef.current) {
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
       streamRef.current = stream;
       setRetakeIndex(index);
 
@@ -98,7 +109,7 @@ export default function CameraCapture({
         await videoRef.current.play();
       }
 
-      setCameraActive(true);
+      if (mountedRef.current && operation === operationRef.current) setCameraActive(true);
     } catch (err) {
       stopCamera();
 
@@ -129,6 +140,8 @@ export default function CameraCapture({
       return;
     }
 
+    setBusy(true);
+    const operation = ++operationRef.current;
     const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -136,6 +149,7 @@ export default function CameraCapture({
     const context = canvas.getContext("2d");
 
     if (!context) {
+      setBusy(false);
       setError("Unable to capture image.");
       return;
     }
@@ -144,6 +158,8 @@ export default function CameraCapture({
 
     canvas.toBlob(
       (blob) => {
+        if (!mountedRef.current || operation !== operationRef.current) return;
+        setBusy(false);
         if (!blob) {
           setError("Photo capture failed. Please retry.");
           return;
@@ -194,6 +210,8 @@ export default function CameraCapture({
   }
 
   function deletePhoto(id: string) {
+    stopCamera();
+    setBusy(false);
     setPhotos((previous) => {
       const photo = previous.find((p) => p.id === id);
 
@@ -214,10 +232,11 @@ export default function CameraCapture({
     }
 
     setBusy(true);
+    const newPhotos: FridgePhoto[] = [];
 
     try {
       const remaining = MAX_PHOTOS - photos.length;
-      const newPhotos: FridgePhoto[] = [];
+
 
       for (const path of SAMPLES.slice(0, remaining)) {
         const response = await fetch(path);
@@ -246,6 +265,10 @@ export default function CameraCapture({
         });
       }
 
+      if (!mountedRef.current) {
+        newPhotos.forEach(photo => URL.revokeObjectURL(photo.previewUrl));
+        return;
+      }
       setPhotos((previous) => {
         const available = MAX_PHOTOS - previous.length;
         const accepted = newPhotos.slice(0, available);
@@ -257,6 +280,7 @@ export default function CameraCapture({
         return [...previous, ...accepted];
       });
     } catch {
+      newPhotos.forEach(photo => URL.revokeObjectURL(photo.previewUrl));
       setError(
         "Sample photos are missing. Check public/sample-photos."
       );
@@ -265,9 +289,31 @@ export default function CameraCapture({
     }
   }
 
+  function clearPhotos() {
+    stopCamera();
+    photosRef.current.forEach(photo => URL.revokeObjectURL(photo.previewUrl));
+    photosRef.current = [];
+    setPhotos([]);
+    setError("");
+    setBusy(false);
+  }
+
+  function acceptFiles(files: File[]) {
+    if (busy) return;
+            if (files.length + photos.length > MAX_PHOTOS || files.some(file =>
+              !["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024)) {
+              setError("Select up to 3 JPEG, PNG or WebP photos, each at most 5 MB.");
+              return;
+            }
+            setError("");
+            setPhotos(previous => [...previous, ...files.map(file => ({
+              id: crypto.randomUUID(), file, previewUrl: URL.createObjectURL(file), source: "upload" as const,
+            }))]);
+  }
+
   return (
     <section className="camera-panel">
-      <h2>📷 Scan Your Fridge</h2>
+      <h2>Fridge photos</h2>
       <p>
         Capture your fridge shelves and door.
         Maximum {MAX_PHOTOS} photos.
@@ -277,9 +323,26 @@ export default function CameraCapture({
         Photos selected: {photos.length}/{MAX_PHOTOS}
       </p>
 
+      <p className="photo-privacy">Photos stay in this page until deleted or the page is closed or reloaded. Saving a scan saves ingredient text, not photos. Analysis sends photos to the AI provider; provider retention may differ.</p>
+      {photos.length > 0 && <button type="button" onClick={clearPhotos} disabled={busy}>Delete all photos</button>}
+      <div className="upload-zone" onDragOver={event => event.preventDefault()} onDrop={event => {event.preventDefault(); acceptFiles(Array.from(event.dataTransfer.files));}}>
+      <span className="upload-symbol" aria-hidden="true">&#8593;</span>
+      <h3>A fresh look inside your fridge</h3><p>Drop your photos here, or choose files below.</p>
+      <label>
+        Upload Photos
+        <input type="file" accept="image/jpeg,image/png,image/webp" multiple
+          disabled={busy || photos.length >= MAX_PHOTOS}
+          onChange={(event) => {
+            acceptFiles(Array.from(event.target.files ?? []));
+            event.target.value = "";
+          }} />
+      </label>
+      <small>1-3 photos &middot; JPEG, PNG or WebP &middot; Up to 5 MB each</small>
+      </div>
       <video
         ref={videoRef}
         className="camera-video"
+        aria-label="Live camera preview"
         autoPlay
         muted
         playsInline
@@ -299,7 +362,7 @@ export default function CameraCapture({
           <button
             type="button"
             className="camera-secondary"
-            onClick={stopCamera}
+            onClick={() => { stopCamera(); setBusy(false); }}
           >
             Cancel Camera
           </button>

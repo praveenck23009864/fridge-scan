@@ -8,11 +8,10 @@ SAMPLE = Path(__file__).resolve().parent.parent / 'frontend/public/sample-photos
 @pytest.fixture(autouse=True)
 def mock_mode(monkeypatch):
     monkeypatch.setenv('MOCK_VISION', 'true')
-    monkeypatch.delenv('OPENROUTER_API_KEY', raising=False)
-    monkeypatch.setenv('VISION_MODELS', 'not-needed-in-mock-mode')
+    monkeypatch.delenv('GROQ_API_KEY', raising=False)
     def no_network(**kwargs):
-        pytest.fail('Mock recognition must never construct an OpenRouter client')
-    monkeypatch.setattr(vision, 'AsyncOpenAI', no_network)
+        pytest.fail('Mock recognition must never construct an Groq client')
+    monkeypatch.setattr(vision, 'AsyncGroq', no_network)
 
 
 def analyze(client, raw=None, consent='true'):
@@ -40,6 +39,5 @@ def test_mock_still_requires_valid_photo_and_consent(client):
 
 def test_mock_disabled_by_default(client, monkeypatch):
     monkeypatch.delenv('MOCK_VISION')
-    monkeypatch.setenv('VISION_MODELS', ','.join(vision.DEFAULT_MODELS))
     assert client.get('/api/health').json()['mock_vision'] is False
-    assert analyze(client).status_code == 401
+    assert analyze(client).status_code == 503

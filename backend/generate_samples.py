@@ -1,6 +1,6 @@
 
 from pathlib import Path
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 
 output = (
     Path(__file__).resolve().parent.parent

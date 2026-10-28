@@ -341,3 +341,15 @@ export const api = {
       }
     ),
 };
+
+
+export interface FridgeSuggestionsData {
+  scan_id: number | null;
+  is_mock: boolean;
+  items: {id: number; name: string; stock_status: 'low'}[];
+}
+export const getFridgeSuggestions = () => request<FridgeSuggestionsData>('/api/fridge-suggestions');
+export const addFridgeSuggestions = (listId: number, scanId: number, itemIds: number[]) =>
+  request<ShoppingList>(`/api/shopping-lists/${listId}/fridge-suggestions`, {
+    method: 'POST', body: JSON.stringify({scan_id: scanId, item_ids: itemIds}),
+  });

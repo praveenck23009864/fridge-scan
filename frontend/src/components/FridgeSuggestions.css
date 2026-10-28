@@ -1,0 +1,101 @@
+.fridge-suggestions {
+    margin: 18px 0;
+    padding: 18px;
+    border: 1px solid #dce6cf;
+    border-radius: 12px;
+    background: #f5f8ee
+}
+
+.suggestion-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap
+}
+
+.suggestion-heading h4 {
+    font-size: 15px;
+    color: #315638
+}
+
+.suggestion-heading button {
+    background: white;
+    color: #466339;
+    border-color: #d6dfc9;
+    font-size: 11px;
+    padding: 6px 10px;
+    min-height: 36px
+}
+
+.fridge-suggestions p {
+    font-size: 12px;
+    margin: 12px 0
+}
+
+.fridge-suggestions fieldset {
+    border: 0;
+    padding: 0;
+    margin: 14px 0;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    min-width: 0
+}
+
+.suggestion-option {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    background: white;
+    border: 1px solid #dbe3ce;
+    border-radius: 9px;
+    padding: 10px 12px;
+    min-width: 0;
+    max-width: 100%;
+    cursor: pointer
+}
+
+.suggestion-option span {
+    overflow-wrap: anywhere
+}
+
+.suggestion-option small {
+    color: #805b1a;
+    background: #fff2cf;
+    border-radius: 10px;
+    padding: 2px 7px;
+    font-size: 10px
+}
+
+.suggestion-option:has(input:disabled) {
+    opacity: .7;
+    cursor: default
+}
+
+.fridge-suggestions>button {
+    font-size: 12px
+}
+
+.fridge-suggestions [role=alert] {
+    color: #9c3c2e
+}
+
+.fridge-suggestions [role=status] {
+    color: #315e35
+}
+
+@media(max-width:600px) {
+    .fridge-suggestions {
+        padding: 14px
+    }
+
+    .suggestion-option {
+        width: 100%;
+        flex-wrap: wrap
+    }
+
+    .suggestion-option small {
+        margin-left: auto
+    }
+}

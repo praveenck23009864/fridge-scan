@@ -1,0 +1,3 @@
+import { defineConfig } from '@playwright/test';
+export default defineConfig({testDir:'./e2e',workers:1,webServer:[{command:'..\\backend\\venv\\Scripts\\python.exe -m uvicorn main:app --app-dir ../backend --port 8001',url:'http://127.0.0.1:8001/api/health',reuseExistingServer:true,env:{DATABASE_URL:'sqlite:///D:/fridge-scan-mvp/test-results/e2e.db',MOCK_VISION:'true',MOCK_RECIPES:'true'}},{command:'npm run dev -- --host localhost --port 5173',url:'http://localhost:5173',reuseExistingServer:true}], timeout:60000,outputDir:'../test-results/playwright',reporter:[['list'],['json',{outputFile:'../test-results/results.json'}]],use:{baseURL:'http://localhost:5173',headless:false,screenshot:'only-on-failure',trace:'on'}});
+

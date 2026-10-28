@@ -1,5 +1,6 @@
 # Python
 venv/
+.venv/
 __pycache__/
 *.pyc
 .pytest_cache/
@@ -7,6 +8,16 @@ __pycache__/
 # Database
 *.db
 *.sqlite3
+*.sqlite
+*.db-wal
+*.db-shm
+*.db-journal
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite-journal
+*.sqlite3-wal
+*.sqlite3-shm
+*.sqlite3-journal
 
 # Secrets
 .env
@@ -19,3 +30,11 @@ dist/
 
 # Editor
 .vscode/
+# Local test evidence
+test-results/
+playwright-report/
+pytest-temp/
+test-temp/
+test-runs/
+*.log
+backups/

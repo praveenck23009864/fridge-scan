@@ -97,3 +97,19 @@ class ReviewSave(BaseModel):
         if len(ids) != len(set(ids)):
             raise ValueError('Duplicate item IDs in review')
         return self
+
+class FridgeSuggestion(BaseModel):
+    id: int
+    name: str
+    stock_status: Literal['low'] = 'low'
+
+
+class FridgeSuggestionsResponse(BaseModel):
+    scan_id: int | None = None
+    is_mock: bool = False
+    items: list[FridgeSuggestion] = Field(default_factory=list)
+
+
+class AddFridgeSuggestions(BaseModel):
+    scan_id: int = Field(gt=0, strict=True)
+    item_ids: list[Annotated[int, Field(gt=0, strict=True)]] = Field(min_length=1, max_length=200)
