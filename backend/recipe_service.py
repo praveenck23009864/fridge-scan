@@ -16,6 +16,19 @@ class RecipeServiceError(Exception):
         self.status_code = status_code
 
 
+def ingredient_key(name: str) -> str:
+    # Explicit whole-name aliases only; no substring or blanket stemming.
+    import unicodedata
+    key = ' '.join(unicodedata.normalize('NFKC', name).casefold().split())
+    aliases = {
+        'tomatoes': 'tomato', 'bell peppers': 'bell pepper', 'capsicum': 'bell pepper',
+        'capsicums': 'bell pepper', 'brinjal': 'eggplant', 'brinjals': 'eggplant',
+        'eggplants': 'eggplant', 'cilantro': 'coriander leaves',
+        'coriander': 'coriander leaves', 'fresh coriander': 'coriander leaves',
+    }
+    return aliases.get(key, key)
+
+
 def generate_recipes(
     ingredients: list[str],
     servings: int = 2,
@@ -24,9 +37,12 @@ def generate_recipes(
     cuisine: str = "Any",
     spice_level: str = "Medium",
     excluded_ingredients: str = "",
+    mode: str = "have",
 ) -> dict:
 
-    if cuisine not in ("Any", "Indian", "South Indian", "Chinese", "Italian", "Mexican", "Thai"):
+    if mode not in ("have", "almost"):
+        raise RecipeServiceError("Invalid recipe mode.", 422)
+    if cuisine not in ("Any", "Indian", "South Indian", "Chinese", "Italian", "Mexican", "Thai", "american"):
         raise RecipeServiceError("Invalid cuisine preference.", 422)
     if spice_level not in ("Mild", "Medium", "Spicy"):
         raise RecipeServiceError("Invalid spice level.", 422)
@@ -72,6 +88,10 @@ def generate_recipes(
         ]
         recipes = [
             {
+                "cuisine": cuisine,
+                "ingredient_match": 100,
+                "ready_to_cook": False,
+                "quantity_status": "unverified",
                 "name": title,
                 "cooking_time_minutes": minutes,
                 "servings": servings,
@@ -125,7 +145,9 @@ def generate_recipes(
         "Dietary and exclusion constraints take priority over cuisine. If incompatible, return an empty recipes array. "
         f"Maximum total preparation and cooking time: {max_time or 'no limit'} minutes. "
         "Use only actually available ingredients in available_ingredients, copying their exact names. "
-        "Put any additional required ingredients in missing_ingredients. "
+        "Put every additional required ingredient, including oil, seasoning and garnishes, in missing_ingredients. "
+        "Minimize missing ingredients. For almost mode use no more than two missing ingredients. "
+        f"Mode: {mode}. American means cuisine of the USA. "
         "Follow the dietary preferences and use safe cooking instructions. "
         "Return only JSON with a recipes array. Each recipe must have: "
         "name, servings (the requested integer), cooking_time_minutes (integer), difficulty (easy, medium or hard), "
@@ -228,11 +250,11 @@ def generate_recipes(
             if contains_exclusion(' '.join([name, *instructions, *(row['name'] for row in available + missing)])):
                 raise RecipeServiceError("Generated recipes included an excluded ingredient. Please try again.", 502)
             # The saved inventory, never the model, decides what is available.
-            inventory = {name.casefold(): name for name in clean_ingredients}
+            inventory = {ingredient_key(name): name for name in clean_ingredients}
             classified = {"available": [], "missing": []}
             used = set()
             for row in available + missing:
-                key_name = ' '.join(row['name'].split()).casefold()
+                key_name = ingredient_key(row['name'])
                 if key_name in used:
                     continue
                 used.add(key_name)
@@ -241,8 +263,15 @@ def generate_recipes(
                 else:
                     classified['missing'].append(row)
 
+            total = len(classified['available']) + len(classified['missing'])
+            if not total or not classified['available'] or (mode == "almost" and len(classified['missing']) > 2):
+                continue
             recipes.append(
                 {
+                    "cuisine": cuisine,
+                    "ready_to_cook": False,
+                    "quantity_status": "unverified",
+                    "ingredient_match": round(100 * len(classified["available"]) / total),
                     "name": name.strip(),
                     "cooking_time_minutes": minutes,
                     "servings": servings,
@@ -253,11 +282,7 @@ def generate_recipes(
                 }
             )
 
-        if not recipes:
-            raise RecipeServiceError(
-                "No recipes fit the selected preferences and cooking time.",
-                422,
-            )
+        recipes.sort(key=lambda r: (len(r["missing_ingredients"]), -r["ingredient_match"]))
 
         return {
             "model_used": response.model or model,

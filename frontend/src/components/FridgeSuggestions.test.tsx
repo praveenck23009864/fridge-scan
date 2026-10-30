@@ -1,7 +1,7 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import FridgeSuggestions from './FridgeSuggestions';
+import FridgeSuggestions from '../features/shopping-lists/FridgeSuggestions';
 import { addFridgeSuggestions } from '../services/api';
 vi.mock('../services/api', () => ({ addFridgeSuggestions: vi.fn() }));
 afterEach(() => { cleanup(); vi.resetAllMocks(); });

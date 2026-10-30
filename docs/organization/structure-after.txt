@@ -1,0 +1,11 @@
+frontend/src/features/{dashboard,inventory,fridge-scan,recipes,shopping-lists}/
+frontend/src/shared/{ui,types}/
+frontend/src/services/ (unchanged)
+frontend/src/styles/
+frontend/src/components/ (existing tests only)
+frontend/src/{App.tsx,App.test.tsx,main.tsx,navigation.ts,assets/}
+backend/ (existing logical module boundaries and test locations preserved)
+docs/{ASSIGNMENT_AUDIT.md,CLEANUP_REPORT.md,FRIDGELY_V2.md,RECOGNITION.md,organization/}
+scripts/ (manual photo catalog maintenance, unchanged)
+test-results/screenshots/ (root-level screenshots)
+test-results/ (logs, databases and existing grouped artifacts preserved)

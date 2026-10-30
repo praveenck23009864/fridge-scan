@@ -1,0 +1,5 @@
+frontend/src/: App, navigation, categories, global CSS, assets, services, components (all features and tests mixed)
+backend/: main, CRUD, models, schemas, database, services, tests, environment and database files
+documentation: README + three root reports + backend/RECOGNITION.md
+scripts/: manual photo catalog maintenance
+test-results/: logs, databases, screenshots, traces and diagnostic utilities

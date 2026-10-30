@@ -1,5 +1,5 @@
 import {useRef, useState} from 'react';
-import {addFridgeSuggestions, type FridgeSuggestionsData, type ShoppingList} from '../services/api';
+import {addFridgeSuggestions, type FridgeSuggestionsData, type ShoppingList} from '../../services/api';
 import './FridgeSuggestions.css';
 
 export default function FridgeSuggestions({list,data,loading,error,onRefresh,onUpdated}: {

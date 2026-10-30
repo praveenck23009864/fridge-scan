@@ -62,7 +62,7 @@ def save_review(
     try:
         # Validate before changing stored rows, including for direct Python callers
         # that may have mutated an already constructed schema instance.
-        data = ReviewSave.model_validate(data.model_dump())
+        data = ReviewSave.model_validate(data.model_dump(exclude_unset=True))
         scan = db.get(Scan, scan_id)
         if scan is None:
             return None
@@ -82,12 +82,15 @@ def save_review(
                 item = DetectedItem(
                     scan_id=scan_id,
                     name=incoming.name,
+                    category=incoming.category,
                     stock_status=incoming.stock_status,
                     confirmed=True,
                 )
                 db.add(item)
             else:
                 item = existing[incoming.id]
+                if "category" in incoming.model_fields_set:
+                    item.category = incoming.category
                 item.name = incoming.name
                 item.stock_status = incoming.stock_status
                 item.confirmed = True
@@ -132,7 +135,7 @@ def scanto_shopping_list(db: Session, scan_id: int) -> ShoppingList | None:
             name=f"{prefix}Fridge scan #{scan_id}", source_scan_id=scan_id
         )
         shopping_list.items = [
-            ShoppingListItem(name=name, quantity=1, completed=False)
+            ShoppingListItem(name=name, category=next((i.category for i in low_items if " ".join(i.name.split()).casefold()==name.casefold()), "Other"), quantity=1, completed=False)
             for name in names.values()
         ]
         db.add(shopping_list)
@@ -195,7 +198,7 @@ def add_fridge_suggestions(db: Session, list_id: int, scan_id: int, item_ids: li
             name = eligible[item_id]
             key = normalized_food_name(name)
             if key not in existing:
-                db.add(ShoppingListItem(shopping_list_id=list_id, name=name, quantity=1, completed=False))
+                db.add(ShoppingListItem(shopping_list_id=list_id, name=name, category=db.get(DetectedItem, item_id).category, quantity=1, completed=False))
                 existing.add(key)
         db.commit()
         db.expire(target, ['items'])

@@ -6,12 +6,15 @@ from pydantic import BaseModel, Field, ConfigDict, StringConstraints, model_vali
 FoodName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
 StockStatus = Literal['low', 'available', 'unknown']
 
+Category = Literal['Vegetables','Fruits','Dairy','Meat & Seafood','Beverages','Grains','Condiments','Other']
+
 
 class ShoppingListCreate(BaseModel):
     name: FoodName
 
 
 class ShoppingItemCreate(BaseModel):
+    category: Category = "Other"
     name: FoodName
     quantity: int = Field(default=1, ge=1)
 
@@ -26,12 +29,14 @@ class NonNullUpdate(BaseModel):
 
 
 class ShoppingItemUpdate(NonNullUpdate):
+    category: Category | None = None
     name: FoodName | None = None
     quantity: int | None = Field(default=None, ge=1)
     completed: bool | None = None
 
 
 class ShoppingItemResponse(BaseModel):
+    category: Category = "Other"
     id: int
     shopping_list_id: int
     name: str
@@ -50,6 +55,7 @@ class ShoppingListResponse(BaseModel):
 
 
 class FoodItemFields(BaseModel):
+    category: Category = "Other"
     name: FoodName
     stock_status: StockStatus = 'unknown'
 
@@ -59,6 +65,7 @@ class ItemCreate(FoodItemFields):
 
 
 class ItemUpdate(NonNullUpdate):
+    category: Category | None = None
     name: FoodName | None = None
     stock_status: StockStatus | None = None
     confirmed: bool | None = None
@@ -113,3 +120,6 @@ class FridgeSuggestionsResponse(BaseModel):
 class AddFridgeSuggestions(BaseModel):
     scan_id: int = Field(gt=0, strict=True)
     item_ids: list[Annotated[int, Field(gt=0, strict=True)]] = Field(min_length=1, max_length=200)
+
+class BulkShoppingItems(BaseModel):
+    items: list[ShoppingItemCreate] = Field(min_length=1, max_length=200)

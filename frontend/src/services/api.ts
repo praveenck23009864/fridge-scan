@@ -7,6 +7,7 @@ const API_URL =
 // =====================================
 
 export interface ShoppingItem {
+  category?: string;
   id: number;
   shopping_list_id: number;
   name: string;
@@ -33,6 +34,7 @@ export interface FridgeScan {
 export type StockStatus = "low" | "available" | "unknown";
 
 export interface DetectedItem {
+  category?: string;
   id: number;
   scan_id: number;
   name: string;
@@ -41,12 +43,14 @@ export interface DetectedItem {
 }
 
 export interface ItemCreate {
+  category?: string;
   name: string;
   stock_status?: StockStatus;
   confirmed?: boolean;
 }
 
 export interface ItemUpdate {
+  category?: string;
   name?: string;
   stock_status?: StockStatus;
   confirmed?: boolean;
@@ -70,6 +74,7 @@ async function request<T>(
   const response = await fetch(
     `${API_URL}${endpoint}`,
     {
+      cache: "no-store",
       ...options,
       headers: {
         Accept: "application/json",
@@ -246,7 +251,7 @@ export const api = {
     data: Partial<
       Pick<
         ShoppingItem,
-        "name" | "quantity" | "completed"
+        "name" | "quantity" | "completed" | "category"
       >
     >
   ) =>
@@ -353,3 +358,6 @@ export const addFridgeSuggestions = (listId: number, scanId: number, itemIds: nu
   request<ShoppingList>(`/api/shopping-lists/${listId}/fridge-suggestions`, {
     method: 'POST', body: JSON.stringify({scan_id: scanId, item_ids: itemIds}),
   });
+
+
+export const bulkShoppingItems = (id:number, items:{name:string;category:string}[]) => request<ShoppingList>(`/api/shopping-lists/${id}/bulk-items`,{method:'POST',body:JSON.stringify({items})});

@@ -1,0 +1,58 @@
+ D ASSIGNMENT_AUDIT.md
+ D CLEANUP_REPORT.md
+ M README.md
+ D backend/RECOGNITION.md
+ M backend/crud.py
+ M backend/database.py
+ M backend/main.py
+ M backend/models.py
+ M backend/recipe_service.py
+ M backend/schemas.py
+ M backend/test_recipes.py
+ M frontend/e2e/assignment.spec.ts
+ M frontend/e2e/fridge-suggestions.spec.ts
+ M frontend/e2e/recipe-preferences.spec.ts
+ M frontend/e2e/ui-redesign.spec.ts
+ M frontend/e2e/workflow.spec.ts
+ M frontend/package-lock.json
+ M frontend/package.json
+ M frontend/playwright.config.ts
+ D frontend/src/App.css
+ M frontend/src/App.test.tsx
+ M frontend/src/App.tsx
+ D frontend/src/components/CameraCapture.css
+ M frontend/src/components/CameraCapture.test.tsx
+ D frontend/src/components/CameraCapture.tsx
+ D frontend/src/components/FridgeSuggestions.css
+ M frontend/src/components/FridgeSuggestions.test.tsx
+ D frontend/src/components/FridgeSuggestions.tsx
+ D frontend/src/components/RecipeSuggestions.css
+ M frontend/src/components/RecipeSuggestions.test.tsx
+ D frontend/src/components/RecipeSuggestions.tsx
+ D frontend/src/components/ScanReview.css
+ M frontend/src/components/ScanReview.test.tsx
+ D frontend/src/components/ScanReview.tsx
+ D frontend/src/index.css
+ M frontend/src/main.tsx
+ M frontend/src/services/api.ts
+?? backend/test_food_photo_catalog.py
+?? backend/test_inventory_loading.py
+?? backend/test_recipe_inventory_modes.py
+?? backend/test_v2_inventory.py
+?? docs/
+?? frontend/e2e/dashboard-inventory.spec.ts
+?? frontend/e2e/food-images.spec.ts
+?? frontend/e2e/inline-inventory.spec.ts
+?? frontend/e2e/recipe-inventory.spec.ts
+?? frontend/public/foods/
+?? frontend/src/components/Dashboard.test.tsx
+?? frontend/src/components/FoodImage.test.tsx
+?? frontend/src/components/Inventory.test.tsx
+?? frontend/src/components/RecipeShopping.test.tsx
+?? frontend/src/components/ShoppingGroups.test.tsx
+?? frontend/src/features/
+?? frontend/src/navigation.ts
+?? frontend/src/services/inventory.ts
+?? frontend/src/shared/
+?? frontend/src/styles/
+?? scripts/

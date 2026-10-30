@@ -52,7 +52,9 @@ def test_real_mode_contract_and_preferences(monkeypatch):
     result = recipes.generate_recipes([' Tomato ', 'tomato'], 2, 'vegan', 20)
     assert result['is_mock'] is False
     assert result['model_used'] == 'qwen/qwen3.8-27b'
-    assert result['recipes'] == GOOD['recipes']
+    assert all(result['recipes'][0][key] == value for key, value in GOOD['recipes'][0].items())
+    assert result['recipes'][0]['ingredient_match'] == 50
+    assert result['recipes'][0]['ready_to_cook'] is False
     assert len(calls) == 1
     prompt = calls[0]['messages'][1]['content']
     assert '["Tomato"]' in prompt and 'vegan' in prompt and '20' in prompt
@@ -116,9 +118,7 @@ def test_truncated_response(monkeypatch):
 
 def test_time_limit(monkeypatch):
     cloud(monkeypatch)
-    with pytest.raises(recipes.RecipeServiceError) as exc:
-        recipes.generate_recipes(['Tomato'], max_time=10)
-    assert exc.value.status_code == 422
+    assert recipes.generate_recipes(['Tomato'], max_time=10)['recipes'] == []
 
 
 @pytest.mark.parametrize('value', ['nan','inf','0','-1','121','bad'])
@@ -143,7 +143,8 @@ def test_recipes_from_confirmed_sqlite_items_and_shopping(client, monkeypatch):
     scan_id = scan['id']
     assert client.post('/api/recipes/generate', json={'scan_id': scan_id}).status_code == 422
     assert client.put(f'/api/scans/{scan_id}/review', json={'items': [
-        {'name': 'Tomato', 'stock_status': 'low', 'confirmed': True},
+        {'name': 'Tomato', 'stock_status': 'available', 'confirmed': True},
+        {'name': 'Milk', 'stock_status': 'low', 'confirmed': True},
     ]}).status_code == 200
     client.post(f'/api/scans/{scan_id}/items', json={'name': 'Chicken', 'stock_status': 'unknown', 'confirmed': False})
     result = client.post('/api/recipes/generate', json={
@@ -153,7 +154,7 @@ def test_recipes_from_confirmed_sqlite_items_and_shopping(client, monkeypatch):
     prompt = calls[0]['messages'][1]['content']
     assert 'Tomato' in prompt and 'Chicken' not in prompt
     shopping = client.post(f'/api/scans/{scan_id}/save-to-list').json()
-    assert [item['name'] for item in shopping['items']] == ['Tomato']
+    assert [item['name'] for item in shopping['items']] == ['Milk']
     assert client.get(f'/api/scans/{scan_id}/items').status_code == 200
 
 

@@ -12,6 +12,7 @@ vi.mock("./services/api", () => ({
 
 beforeEach(() => {
   vi.resetAllMocks();
+  window.history.replaceState(null, '', '/scan');
   vi.mocked(getFridgeSuggestions).mockResolvedValue({scan_id:null,is_mock:false,items:[]});
   vi.mocked(api.getLists).mockResolvedValue([]);
   vi.mocked(api.getScans).mockResolvedValue([]);

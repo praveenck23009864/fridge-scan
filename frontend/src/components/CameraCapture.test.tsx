@@ -1,7 +1,7 @@
 import {afterEach,expect,it,vi} from 'vitest';
 import {cleanup,render,screen,waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import CameraCapture from './CameraCapture';
+import CameraCapture from '../features/fridge-scan/CameraCapture';
 afterEach(()=>{cleanup();vi.restoreAllMocks();vi.unstubAllGlobals();});
 it('stops a camera stream that resolves after unmount',async()=>{
  let resolve!:(stream:MediaStream)=>void;

@@ -1,0 +1,19 @@
+[
+  "frontend/src/App.tsx",
+  "frontend/src/main.tsx",
+  "frontend/src/components/CameraCapture.test.tsx",
+  "frontend/src/components/Dashboard.test.tsx",
+  "frontend/src/features/dashboard/Dashboard.tsx",
+  "frontend/src/components/FoodImage.test.tsx",
+  "frontend/src/components/FridgeSuggestions.test.tsx",
+  "frontend/src/features/shopping-lists/FridgeSuggestions.tsx",
+  "frontend/src/components/Inventory.test.tsx",
+  "frontend/src/features/inventory/Inventory.tsx",
+  "frontend/src/components/RecipeShopping.test.tsx",
+  "frontend/src/features/recipes/RecipeShopping.tsx",
+  "frontend/src/components/RecipeSuggestions.test.tsx",
+  "frontend/src/components/ScanReview.test.tsx",
+  "frontend/src/features/fridge-scan/ScanReview.tsx",
+  "frontend/src/components/ShoppingGroups.test.tsx",
+  "frontend/src/features/shopping-lists/ShoppingGroups.tsx"
+]

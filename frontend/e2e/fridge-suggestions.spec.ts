@@ -1,7 +1,7 @@
 import {test, expect} from '@playwright/test';
 
 test('saved fridge suggestions bulk add to an existing list and survive reload', async ({page, request}) => {
-  const base = 'http://127.0.0.1:8001/api';
+  const base = 'http://127.0.0.1:8031/api';
   const scan = await (await request.post(`${base}/scans`, {data:{}})).json();
   const review = await request.put(`${base}/scans/${scan.id}/review`, {data:{items:[
     {name:'Whole Milk',stock_status:'low',confirmed:true},
@@ -14,13 +14,13 @@ test('saved fridge suggestions bulk add to an existing list and survive reload',
   const list = await (await request.post(`${base}/shopping-lists`,{data:{name}})).json();
   await request.post(`${base}/shopping-lists/${list.id}/items`,{data:{name:'whole   MILK'}});
   await page.route('**/api/**',async route => {
-    const url = new URL(route.request().url()); url.host = '127.0.0.1:8001';
+    const url = new URL(route.request().url()); url.host = '127.0.0.1:8031';
     await route.fulfill({response:await request.fetch(url.toString(),{
       method:route.request().method(),
       data:route.request().postData() ? JSON.parse(route.request().postData()!) : undefined,
     })});
   });
-  await page.goto('/');
+  await page.goto('/shopping');
   const card = page.locator('.list-card').filter({has:page.getByRole('heading',{name,exact:true})});
   const suggestions = card.getByRole('region',{name:`Fridge suggestions for ${name}`});
   await expect(suggestions.getByRole('checkbox',{name:/Whole Milk/})).toBeDisabled();
@@ -41,13 +41,15 @@ test('saved fridge suggestions bulk add to an existing list and survive reload',
   const persisted = await (await request.get(`${base}/shopping-lists/${list.id}`)).json();
   expect(persisted.items.map((item:{name:string})=>item.name).sort()).toEqual(['Eggs','Tomatoes','whole   MILK'].sort());
   // Unsaved edits never affect suggestions; saving refreshes every list.
+  await page.getByRole('navigation').getByRole('link',{name:'Scan Fridge'}).click();
   await page.getByRole('combobox',{name:/^Stock status 4/}).selectOption('low');
   await expect(suggestions.getByRole('checkbox',{name:/Rice/})).toHaveCount(0);
-  await page.getByLabel('Confirm item 4',{exact:true}).check();
-  await page.getByRole('button',{name:'Save confirmed items',exact:true}).click();
+  
+  await page.getByRole('button',{name:'Save Confirmed Items',exact:true}).click();
+  await page.getByRole('navigation').getByRole('link',{name:'Shopping Lists'}).click();
   await expect(suggestions.getByRole('checkbox',{name:/Rice/})).toBeEnabled();
-  await page.screenshot({path:'../test-results/fridge-suggestions.png',fullPage:true});
+  await page.screenshot({path:'../test-results/screenshots/fridge-suggestions.png',fullPage:true});
   await page.setViewportSize({width:390,height:844});
   await suggestions.scrollIntoViewIfNeeded();
-  await page.screenshot({path:'../test-results/fridge-suggestions-mobile.png'});
+  await page.screenshot({path:'../test-results/screenshots/fridge-suggestions-mobile.png'});
 });

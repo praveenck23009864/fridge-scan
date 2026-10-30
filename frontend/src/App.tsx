@@ -10,14 +10,20 @@ import {
 
 import CameraCapture, {
   type FridgePhoto,
-} from "./components/CameraCapture";
+} from "./features/fridge-scan/CameraCapture";
 
-import ScanReview from "./components/ScanReview";
-import RecipeSuggestions from "./components/RecipeSuggestions";
+import ScanReview from "./features/fridge-scan/ScanReview";
+import RecipeSuggestions from "./features/recipes/RecipeSuggestions";
 
-import FridgeSuggestions from './components/FridgeSuggestions';
+import FridgeSuggestions from './features/shopping-lists/FridgeSuggestions';
 import {getFridgeSuggestions, type FridgeSuggestionsData} from './services/api';
-import "./App.css";
+import "./styles/App.css";
+import "./styles/v2.css";
+import Inventory from "./features/inventory/Inventory";
+import Dashboard from "./features/dashboard/Dashboard";
+import {pagePaths, useNavigation} from "./navigation";
+import ShoppingGroups from "./features/shopping-lists/ShoppingGroups";
+import {LayoutDashboard, ScanLine, Boxes, ChefHat, ShoppingBasket, PanelLeft, Sprout} from "lucide-react";
 
 function App() {
   const [suggestions, setSuggestions] = useState<FridgeSuggestionsData | null>(null);
@@ -37,8 +43,9 @@ function App() {
     return () => { active = false; };
   }, [suggestionRevision]);
 
-  const [summary, setSummary] = useState({scans: 0, ingredients: 0, low: 0});
-  const [activeSection, setActiveSection] = useState('dashboard');
+  const [collapsed, setCollapsed] = useState(false);
+  const {page: activeSection, inventoryVisited, followLink} = useNavigation();
+  const [listsLoaded, setListsLoaded] = useState(false);
 
   const [selectedScanId, setSelectedScanId] =
     useState<number | null>(null);
@@ -113,6 +120,7 @@ function App() {
 
       const data = await api.getLists();
       setLists(data);
+      setListsLoaded(true);
     } catch (err) {
       setError(
         err instanceof Error
@@ -130,6 +138,7 @@ function App() {
       (data) => {
         if (active) {
           setLists(data);
+          setListsLoaded(true);
         }
       },
       (err: unknown) => {
@@ -248,34 +257,35 @@ function App() {
   }
 
   return (
-    <div className="workspace">
-      <a className="skip-link" href="#dashboard">Skip to content</a>
+    <div className={`workspace ${collapsed ? "sidebar-collapsed" : ""}`} onClick={followLink}>
+      <a className="skip-link" href="#main-content">Skip to content</a>
       <aside className="sidebar">
-        <a className="brand" href="#dashboard" onClick={() => setActiveSection('dashboard')}><img className="brand-mark" src="/favicon.svg" alt="" /> Fridgely</a>
+        <div className="sidebar-header">
+          <a className="brand" aria-label="Fridgely" href="/"><img className="brand-mark" src="/favicon.svg" alt="" /><span className="brand-name">Fridgely</span></a>
+          <button className="icon-button collapse-toggle" aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} aria-controls="main-navigation" aria-expanded={!collapsed} onClick={() => setCollapsed(!collapsed)}><PanelLeft size={19} aria-hidden="true"/></button>
+        </div>
         <p className="nav-caption">Your fridge, made smarter.</p>
-        <nav aria-label="Main navigation">
-          {['Dashboard', 'Scan Fridge', 'Recipes', 'Shopping Lists'].map((name, index) => {
-            const id = ['dashboard', 'scan', 'recipes', 'shopping'][index];
-            return <a key={id} href={`#${id}`} aria-current={activeSection === id ? 'location' : undefined} onClick={() => setActiveSection(id)}><span aria-hidden="true">{['\u25eb', '+', '\u2667', '\u2637'][index]}</span>{name}</a>;
-          })}
+        <nav id="main-navigation" aria-label="Main navigation">
+          {[{name:'Dashboard',id:'dashboard',Icon:LayoutDashboard},{name:'Scan Fridge',id:'scan',Icon:ScanLine},{name:'My Inventory',id:'inventory',Icon:Boxes},{name:'Recipes',id:'recipes',Icon:ChefHat},{name:'Shopping Lists',id:'shopping',Icon:ShoppingBasket}].map(({name,id,Icon}) =>
+            <a key={id} href={pagePaths[id as keyof typeof pagePaths]} aria-label={name} title={collapsed ? name : undefined} aria-current={activeSection === id ? 'page' : undefined}><Icon size={20} aria-hidden="true"/><span className="nav-label">{name}</span></a>
+          )}
         </nav>
-        <div className="sidebar-tip"><span aria-hidden="true">&#10035;</span><strong>A little less waste.<br/>A lot more possibility.</strong><p>Make something good with what you already have.</p></div>
+        <div className="sidebar-tip"><Sprout size={24} aria-hidden="true"/><strong>A little less waste.<br/>A lot more possibility.</strong><p>Make something good with what you already have.</p></div>
         <div className="sidebar-footer"><span className="status-dot"/> Your everyday kitchen companion</div>
       </aside>
-      <main className="app">
+      <main id="main-content" className="app" tabIndex={-1}>
         <div className="topbar"><span>Fridgely <span className="breadcrumb"> / My kitchen</span></span><span className="workspace-badge">Personal workspace</span></div>
-        <section id="dashboard" className="dashboard" aria-labelledby="dashboard-title">
-          <header className="page-heading"><div><p className="eyebrow">WELCOME TO FRIDGELY</p><h1 id="dashboard-title">Your fridge, made smarter.</h1><p>Your fridge, recipes and shopping - all in one place.</p></div><a className="button-link" href="#scan" onClick={() => setActiveSection('scan')}>+ Scan your fridge</a></header>
-          <div className="summary-grid">
-            {[['Saved scans', summary.scans, 'Your kitchen history', '\u25eb'], ['Detected ingredients', summary.ingredients, 'In your current review', '\u2667'], ['Low-stock food', summary.low, 'In your current review', '\u2667'], ['Shopping lists', lists.length, 'Ready for your next trip', '\u2637']].map(([title, count, note, icon]) => <article className="summary-card" key={title}><span className="summary-icon" aria-hidden="true">{icon}</span><p>{title}</p><strong>{count}</strong><small>{note}</small></article>)}
-          </div>
-          <div className="welcome-card"><div><p className="eyebrow">FROM FRIDGE TO FORK</p><h2>Something delicious<br/>is already in your fridge.</h2><p>Take a photo. Review your ingredients.<br/>Discover your next meal.</p><a href="#scan" className="text-link" onClick={() => setActiveSection('scan')}>Let's see what's inside <span aria-hidden="true">&#8594;</span></a></div><div className="food-art" aria-hidden="true"><div className="plate"><span>&#129361;</span><span>&#129388;</span><span>&#127813;</span></div><span className="art-label">Fresh ideas start here</span></div></div>
-          <div className="workflow-steps"><span><b>01</b> Scan your fridge</span><span><b>02</b> Review & save</span><span><b>03</b> Cook something good</span></div>
-        </section>
-        <section id="scan" className="workspace-section" aria-label="Scan fridge">
+        <div hidden={activeSection !== 'dashboard'}>
+          <Dashboard revision={suggestionRevision} pending={listsLoaded && !error ? lists.reduce((n, list) => n + list.items.filter(item => !item.completed).length, 0) : null} shoppingError={error} onRetryShopping={() => void loadLists()}/>
+        </div>
+        <div hidden={activeSection !== 'inventory'}>
+          <a href={pagePaths.recipes}>Cook from My Inventory</a>
+          {inventoryVisited && <Inventory locked={reviewDirty || analyzing} onChanged={() => {refreshSuggestions(); setReviewVersion(v => v + 1); setSelectedScanId(null); setAnalysis(null);}} revision={suggestionRevision}/>}
+        </div>
+        <section hidden={activeSection !== 'scan'} id="scan" className="workspace-section" aria-label="Scan fridge">
         <div className="section-heading"><div><p className="eyebrow">KNOW WHAT YOU HAVE</p><h2>Scan your fridge</h2></div><span className="section-tag">01 / CAPTURE & REVIEW</span></div>
       {/* Camera capture */}
-      <CameraCapture onPhotosChange={setFridgePhotos} />
+      <CameraCapture active={activeSection === 'scan'} onPhotosChange={setFridgePhotos} />
 
       {fridgePhotos.length > 0 && (
         <div className="camera-status">
@@ -343,7 +353,8 @@ function App() {
               : "Analyze with AI"}
         </button>
 
-        {analysisError && (
+        {analyzing&&<ol className="processing-steps" aria-label="AI processing stages"><li>Preparing images: selected photos are being uploaded.</li><li>Checking photo quality ? handled by the server.</li><li>Analyzing fridge contents ? waiting for AI.</li><li>Merging detected ingredients ? server validation.</li><li>Preparing results for review ? after the response arrives.</li><p role="status">Processing photos. The server does not report individual stage completion; this operation is indeterminate.</p></ol>}
+      {analysisError && (
           <p
             role="alert"
             className="error"
@@ -362,7 +373,6 @@ function App() {
         onBusyChange={setReviewBusy}
         onReviewSaved={setSelectedScanId}
         onSavedScanChange={refreshSuggestions}
-        onSummaryChange={setSummary}
         onShoppingListCreated={(list) =>
           setLists((previous) => [
             list,
@@ -374,13 +384,13 @@ function App() {
       />
 
       </section>
-      <section id="recipes" className="workspace-section" aria-label="Recipes">
+      <section hidden={activeSection !== 'recipes'} id="recipes" className="workspace-section" aria-label="Recipes">
       <div className="section-heading"><div><p className="eyebrow">MAKE THE MOST OF IT</p><h2>On the menu</h2></div><span className="section-tag">02 / COOK</span></div>
       {/* Recipe generator */}
-      <RecipeSuggestions key={selectedScanId ?? "unsaved"} scanId={selectedScanId} />
+      <RecipeSuggestions revision={suggestionRevision} onShoppingChanged={()=>void loadLists()} scanId={selectedScanId} />
 
       </section>
-      <section id="shopping" className="workspace-section" aria-label="Shopping lists">
+      <section hidden={activeSection !== 'shopping'} id="shopping" className="workspace-section" aria-label="Shopping lists">
       <div className="section-heading"><div><p className="eyebrow">JUST WHAT YOU NEED</p><h2>Your next grocery trip</h2></div><span className="section-tag">03 / RESTOCK</span></div>
       {/* Create shopping list */}
       <section className="panel">
@@ -470,45 +480,8 @@ function App() {
               loading={suggestionLoading} error={suggestionError} onRefresh={refreshSuggestions}
               onUpdated={updated => setLists(previous => previous.map(entry => entry.id === updated.id ? updated : entry))} />
             <div className="list-progress"><span>{list.items.filter(item => item.completed).length} of {list.items.length} items completed</span><progress aria-label={`${list.name} completion`} max={Math.max(list.items.length, 1)} value={list.items.filter(item => item.completed).length}/></div>
-            {list.items.map((item) => (
-              <div
-                className="shopping-item"
-                key={item.id}
-              >
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={item.completed}
-                    onChange={() =>
-                      void toggleItem(
-                        item.id,
-                        item.completed
-                      )
-                    }
-                  />
-
-                  <span
-                    className={
-                      item.completed
-                        ? "completed"
-                        : ""
-                    }
-                  >
-                    {item.name} Ã— {item.quantity}
-                  </span>
-                </label>
-
-                <button
-                  type="button"
-                  className="danger"
-                  onClick={() =>
-                    void deleteItem(item.id)
-                  }
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
+            <p>{list.items.length?Math.round(list.items.filter(i=>i.completed).length/list.items.length*100):0}% completed</p>
+            <ShoppingGroups list={list} onRefresh={()=>void loadLists()} onToggle={(id,done)=>void toggleItem(id,done)} onDelete={id=>void deleteItem(id)}/>
 
             <form
               onSubmit={(event) => {

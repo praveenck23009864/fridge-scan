@@ -1,0 +1,4 @@
+.food-image{display:block;width:88px;height:88px;aspect-ratio:1;object-fit:cover;border-radius:9px;background:var(--canvas);color:var(--muted);flex-shrink:0}
+.food-placeholder{display:flex;align-items:center;justify-content:center;font-size:11px;border:1px solid var(--border)}
+td .food-image{width:48px;height:48px;min-width:48px;border-radius:7px}
+td .food-placeholder span{font-size:10px}

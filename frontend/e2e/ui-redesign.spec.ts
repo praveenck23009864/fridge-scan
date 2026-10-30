@@ -12,7 +12,7 @@ for (const [name,width,height] of [['desktop',1440,1000],['mobile',390,844]] as 
   await page.goto('/');
   await expect(page).toHaveTitle('Fridgely | Your Smart Fridge Companion');
   await expect(page.getByRole('link',{name:'Fridgely',exact:true})).toBeVisible();
-  await expect(page.getByRole('heading',{name:'Your fridge, made smarter.'})).toBeVisible();
+  await expect(page.getByRole('heading',{name:/Something delicious/ })).toBeVisible();
   expect((await page.request.get('/favicon.svg')).ok()).toBeTruthy();
   await page.screenshot({path:`../test-results/ui-redesign/${name}-dashboard.png`});
   await page.getByRole('navigation').getByRole('link',{name:'Scan Fridge'}).click();
@@ -24,9 +24,9 @@ for (const [name,width,height] of [['desktop',1440,1000],['mobile',390,844]] as 
   await page.getByRole('button',{name:/Analyze with development/}).click();
   await page.getByLabel('Food name 1',{exact:true}).fill('Cherry tomatoes');
   await page.getByRole('navigation').getByRole('link',{name:'Recipes',exact:true}).click();
-  await expect(page).toHaveURL(/#recipes$/);
+  await expect(page).toHaveURL(/\/recipes$/);
   await page.getByRole('navigation').getByRole('link',{name:'Shopping Lists'}).click();
-  await expect(page).toHaveURL(/#shopping$/);
+  await expect(page).toHaveURL(/\/shopping$/);
   await page.getByRole('navigation').getByRole('link',{name:'Scan Fridge'}).click();
   await expect(page.getByLabel('Food name 1',{exact:true})).toHaveValue('Cherry tomatoes');
   await page.locator('.scan-review').scrollIntoViewIfNeeded();

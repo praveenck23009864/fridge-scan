@@ -33,6 +33,7 @@ class DetectedItem(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     scan_id: Mapped[int] = mapped_column(Integer, ForeignKey('scans.id'), nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False)
+    category: Mapped[str] = mapped_column(String, nullable=False, default="Other", server_default="Other")
     stock_status: Mapped[str] = mapped_column(String, default='unknown', nullable=True)
     confirmed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
 
@@ -67,6 +68,7 @@ class ShoppingListItem(Base):
         Integer, ForeignKey('shopping_lists.id'), nullable=False
     )
     name: Mapped[str] = mapped_column(String, nullable=False)
+    category: Mapped[str] = mapped_column(String, nullable=False, default="Other", server_default="Other")
     quantity: Mapped[int] = mapped_column(Integer, default=1, nullable=True)
     completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
 

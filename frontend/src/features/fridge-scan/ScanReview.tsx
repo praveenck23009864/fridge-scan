@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   api,
@@ -8,7 +8,7 @@ import {
   type FridgeScan,
   type ShoppingList,
   type StockStatus,
-} from "../services/api";
+} from "../../services/api";
 
 import "./ScanReview.css";
 
@@ -17,7 +17,6 @@ type ReviewItem = {
   id?: number;
   name: string;
   stock_status: StockStatus;
-  confirmed: boolean;
 };
 
 type Props = {
@@ -26,14 +25,26 @@ type Props = {
   onDirtyChange: (dirty: boolean) => void;
   onBusyChange: (busy: boolean) => void;
   onShoppingListCreated: (list: ShoppingList) => void;
-  onSummaryChange?: (summary: {scans: number; ingredients: number; low: number}) => void;
+  onSummaryChange?: (summary: {
+    scans: number;
+    ingredients: number;
+    low: number;
+  }) => void;
   onSavedScanChange?: () => void;
   onReviewSaved?: (scanId: number | null) => void;
 };
 
-function savedRows(items: DetectedItem[]): ReviewItem[] {
+function makeRows(
+  items: Array<{
+    id?: number;
+    name: string;
+    stock_status: StockStatus;
+  }>
+): ReviewItem[] {
   return items.map((item) => ({
-    ...item,
+    id: item.id,
+    name: item.name,
+    stock_status: item.stock_status,
     key: crypto.randomUUID(),
   }));
 }
@@ -41,7 +52,7 @@ function savedRows(items: DetectedItem[]): ReviewItem[] {
 function errorMessage(error: unknown): string {
   return error instanceof Error
     ? error.message
-    : "Could not complete the request. Please try again.";
+    : "Something went wrong. Please try again.";
 }
 
 export default function ScanReview({
@@ -50,21 +61,15 @@ export default function ScanReview({
   onDirtyChange,
   onBusyChange,
   onShoppingListCreated,
-  onReviewSaved,
-  onSavedScanChange,
   onSummaryChange,
+  onSavedScanChange,
+  onReviewSaved,
 }: Props) {
-  const [items, setItems] = useState<ReviewItem[]>(() =>
-    (analysis?.items ?? []).map((item) => ({
-      ...item,
-      key: crypto.randomUUID(),
-      confirmed: false,
-    }))
+  const [items, setItems] = useState<ReviewItem[]>(
+    () => makeRows(analysis?.items ?? [])
   );
 
-  const [scan, setScan] = useState<FridgeScan | null>(
-    null
-  );
+  const [scan, setScan] = useState<FridgeScan | null>(null);
 
   const [metadata, setMetadata] = useState({
     is_mock: analysis?.is_mock ?? false,
@@ -72,12 +77,15 @@ export default function ScanReview({
   });
 
   const [scans, setScans] = useState<FridgeScan[]>([]);
-  const [historyLoading, setHistoryLoading] =
-    useState(true);
+
+  const [historyLoading, setHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState("");
 
   const [busy, setBusy] = useState(false);
   const [dirty, setDirty] = useState(!!analysis);
+
+  // Prevent duplicate submissions while a review is being persisted.
+  const saving = useRef(false);
 
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -86,34 +94,45 @@ export default function ScanReview({
   const [newStatus, setNewStatus] =
     useState<StockStatus>("unknown");
 
-  const hasUnsaved =
-    dirty ||
-    items.some((item) => !item.confirmed) ||
-    !!newName.trim();
-
+  const hasUnsaved = dirty || !!newName.trim();
   const locked = busy || disabled || historyLoading;
 
-  const confirmed = items.filter(
-    (item) => item.confirmed
-  );
-
-  const confirmedLow = confirmed.filter(
+  const lowStockCount = items.filter(
     (item) => item.stock_status === "low"
   ).length;
 
   const hasReview =
     !!analysis || !!scan || items.length > 0;
 
+  const hasInvalidNames = items.some(
+    (item) => !item.name.trim()
+  );
+
+const canSave =
+  !locked &&
+  hasReview &&
+  !hasInvalidNames &&
+  !newName.trim();
+
+  // Update the dashboard counters.
   useEffect(() => {
-    onSummaryChange?.({scans: scans.length, ingredients: items.length, low: items.filter(item => item.stock_status === 'low').length});
-  }, [scans.length, items, onSummaryChange]);
+    onSummaryChange?.({
+      scans: scans.length,
+      ingredients: items.length,
+      low: lowStockCount,
+    });
+  }, [
+    scans.length,
+    items,
+    lowStockCount,
+    onSummaryChange,
+  ]);
 
   // Notify App.tsx about unsaved changes.
   useEffect(() => {
     onDirtyChange(hasUnsaved);
   }, [hasUnsaved, onDirtyChange]);
 
-  // Notify App.tsx when this component is busy.
   useEffect(() => {
     onBusyChange(busy);
   }, [busy, onBusyChange]);
@@ -122,18 +141,15 @@ export default function ScanReview({
   useEffect(() => {
     if (!hasUnsaved) return;
 
-    const warn = (event: BeforeUnloadEvent) => {
+    function warn(event: BeforeUnloadEvent) {
       event.preventDefault();
       event.returnValue = "";
-    };
+    }
 
     window.addEventListener("beforeunload", warn);
 
     return () => {
-      window.removeEventListener(
-        "beforeunload",
-        warn
-      );
+      window.removeEventListener("beforeunload", warn);
     };
   }, [hasUnsaved]);
 
@@ -142,6 +158,8 @@ export default function ScanReview({
     let active = true;
 
     async function restore() {
+      setHistoryLoading(true);
+
       try {
         const saved = await api.getScans();
 
@@ -153,11 +171,9 @@ export default function ScanReview({
           (entry) => entry.status === "reviewed"
         );
 
-        // Do not overwrite a fresh photo analysis.
+        // Do not replace a new AI analysis.
         if (!analysis && latest) {
-          const rows = await api.getScanItems(
-            latest.id
-          );
+          const rows = await api.getScanItems(latest.id);
 
           if (!active) return;
 
@@ -168,11 +184,11 @@ export default function ScanReview({
             model_used: latest.model_used,
           });
 
-          setItems(savedRows(rows));
-          onSavedScanChange?.();
+          setItems(makeRows(rows));
           setDirty(false);
 
-          // Re-enable recipes for saved ingredients.
+          onSavedScanChange?.();
+
           onReviewSaved?.(
             rows.length > 0 ? latest.id : null
           );
@@ -194,11 +210,12 @@ export default function ScanReview({
       active = false;
     };
 
-    // Restore should run when the analysis changes.
+    // Preserve the existing scan-history restore behavior.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [analysis]);
 
-  // Refresh saved scan history.
+  // App remounts this component for each new analysis; initializers own draft state.
+
   async function refreshHistory() {
     setHistoryLoading(true);
     setHistoryError("");
@@ -213,12 +230,11 @@ export default function ScanReview({
     }
   }
 
-  // Open a previously saved scan.
   async function openScan(selected: FridgeScan) {
     if (
       hasUnsaved &&
       !window.confirm(
-        "Discard unsaved review changes and open this saved scan?"
+        "Discard unsaved changes and open this saved scan?"
       )
     ) {
       return;
@@ -226,25 +242,26 @@ export default function ScanReview({
 
     setBusy(true);
     setError("");
+    setNotice("");
 
     try {
-      const rows = await api.getScanItems(
-        selected.id
-      );
+      const rows: DetectedItem[] =
+        await api.getScanItems(selected.id);
 
       setScan(selected);
+      setItems(makeRows(rows));
 
       setMetadata({
         is_mock: selected.is_mock,
         model_used: selected.model_used,
       });
 
-      setItems(savedRows(rows));
-      onSavedScanChange?.();
       setDirty(false);
       setNewName("");
+      setNewStatus("unknown");
 
-      // Enable recipes only when saved food exists.
+      onSavedScanChange?.();
+
       if (
         selected.status === "reviewed" &&
         rows.length > 0
@@ -254,9 +271,7 @@ export default function ScanReview({
         onReviewSaved?.(null);
       }
 
-      setNotice(
-        `Loaded saved scan #${selected.id}.`
-      );
+      setNotice(`Loaded saved scan #${selected.id}.`);
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -264,7 +279,14 @@ export default function ScanReview({
     }
   }
 
-  // Edit a review item.
+  // Every ingredient change resets final confirmation.
+  function markChanged() {
+    setDirty(true);
+    onReviewSaved?.(null);
+    setError("");
+    setNotice("");
+  }
+
   function editItem(
     key: string,
     change: Partial<ReviewItem>
@@ -277,20 +299,13 @@ export default function ScanReview({
       )
     );
 
-    setDirty(true);
-
-    // Require saving after edits.
-    onReviewSaved?.(null);
-
-    setNotice("");
-    setError("");
+    markChanged();
   }
 
-  // Add a missing food item.
   function addItem() {
     const name = newName.trim();
 
-    if (!name) return;
+    if (!name || items.length >= 200) return;
 
     setItems((previous) => [
       ...previous,
@@ -298,54 +313,43 @@ export default function ScanReview({
         key: crypto.randomUUID(),
         name,
         stock_status: newStatus,
-        confirmed: false,
       },
     ]);
 
     setNewName("");
     setNewStatus("unknown");
 
-    setDirty(true);
-    onReviewSaved?.(null);
-
-    setNotice("");
-    setError("");
+    markChanged();
   }
 
-  // Delete a draft review item.
+  // Delete ingredient from the current review.
   function deleteReviewItem(key: string) {
     setItems((previous) =>
-      previous.filter(
-        (item) => item.key !== key
-      )
+      previous.filter((item) => item.key !== key)
     );
 
-    setDirty(true);
-    onReviewSaved?.(null);
-
-    setNotice("");
-    setError("");
+    markChanged();
   }
 
-  // Save confirmed food items to the database.
+  // Save ALL remaining ingredients.
   async function save() {
-    if (
-      confirmed.some(
-        (item) => !item.name.trim()
-      )
-    ) {
+
+    if (!hasReview) {
       setError(
-        "Enter a food name for every confirmed item."
+        "Add at least one ingredient before saving."
       );
       return;
     }
 
-    if (confirmed.length === 0 && scan === null) {
+    if (hasInvalidNames) {
       setError(
-        "Confirm at least one food item before saving."
+        "Please enter a name for every ingredient."
       );
       return;
     }
+
+    if (locked || saving.current || newName.trim()) return;
+    saving.current = true;
 
     setBusy(true);
     setError("");
@@ -354,35 +358,23 @@ export default function ScanReview({
     try {
       const current =
         scan ?? (await api.createScan(metadata));
-
       setScan(current);
+
+      // All remaining rows are confirmed automatically.
+      const payload = items.map((item) => ({
+        id: item.id,
+        name: item.name.trim(),
+        stock_status: item.stock_status,
+        confirmed: true as const,
+      }));
 
       const saved = await api.saveReview(
         current.id,
-        confirmed.map((item) => ({
-          id: item.id,
-          name: item.name.trim(),
-          stock_status: item.stock_status,
-          confirmed: true,
-        }))
+        payload
       );
 
-      let index = 0;
-
-      // Update local review with saved item IDs.
-      setItems(
-        items.map((item) =>
-          item.confirmed
-            ? {
-                ...item,
-                ...saved[index++],
-              }
-            : {
-                ...item,
-                id: undefined,
-              }
-        )
-      );
+      // Keep saved database IDs in the UI.
+      setItems(makeRows(saved));
 
       const updated: FridgeScan = {
         ...current,
@@ -395,59 +387,45 @@ export default function ScanReview({
         [
           updated,
           ...previous.filter(
-            (entry) => entry.id !== current.id
+            (entry) => entry.id !== updated.id
           ),
-        ].sort(
-          (a, b) => b.id - a.id
-        )
+        ].sort((a, b) => b.id - a.id)
       );
 
       setDirty(false);
 
       onSavedScanChange?.();
-      const remaining =
-        items.length - saved.length;
 
-      // Recipes use the confirmed snapshot saved to SQLite.
-      // Unchecked drafts do not block recipe generation.
-      if (saved.length > 0) {
-        onReviewSaved?.(current.id);
-      } else {
-        onReviewSaved?.(null);
-      }
+      onReviewSaved?.(
+        saved.length > 0 ? current.id : null
+      );
 
       setNotice(
-        `Saved ${saved.length} confirmed item(s).${
-          remaining > 0
-            ? ` ${remaining} unchecked item(s) remain unsaved drafts.`
-            : " You can safely reload."
-        }`
+        `${saved.length} ingredient(s) saved successfully to My Inventory.`
       );
     } catch (err) {
-      onReviewSaved?.(null);
       setError(errorMessage(err));
     } finally {
+      saving.current = false;
       setBusy(false);
     }
   }
 
   // Create shopping list from saved low-stock food.
   async function createShoppingList() {
-    if (!scan || dirty) return;
+    if (!scan || dirty || locked) return;
 
     setBusy(true);
     setError("");
     setNotice("");
 
     try {
-      const list = await api.saveScanToList(
-        scan.id
-      );
+      const list = await api.saveScanToList(scan.id);
 
       onShoppingListCreated(list);
 
       setNotice(
-        `Shopping list "${list.name}" is ready below.`
+        `Shopping list "${list.name}" is ready.`
       );
     } catch (err) {
       setError(errorMessage(err));
@@ -461,26 +439,20 @@ export default function ScanReview({
       className="panel scan-review"
       aria-labelledby="review-title"
     >
-      <h2 id="review-title">
-        Review food items
-      </h2>
+      <h2 id="review-title">Review Food Items</h2>
 
       <p>
-        Correct the detections, confirm each item,
-        then save your review.
+        Check the ingredients found in your fridge.
+        Edit incorrect names, update stock levels,
+        or delete items you don't want to save.
       </p>
 
       {historyLoading && (
-        <p role="status">
-          Loading saved scans...
-        </p>
+        <p role="status">Loading saved scans...</p>
       )}
 
       {historyError && (
-        <p
-          role="alert"
-          className="error"
-        >
+        <p role="alert" className="error">
           {historyError}
         </p>
       )}
@@ -494,17 +466,14 @@ export default function ScanReview({
         <button
           type="button"
           disabled={locked}
-          onClick={() =>
-            void refreshHistory()
-          }
+          onClick={() => void refreshHistory()}
         >
           Refresh saved scans
         </button>
 
-        {scans.length === 0 &&
-          !historyLoading && (
-            <p>No scans saved yet.</p>
-          )}
+        {scans.length === 0 && !historyLoading && (
+          <p>No scans saved yet.</p>
+        )}
 
         <ul>
           {scans.map((entry) => (
@@ -512,16 +481,10 @@ export default function ScanReview({
               <button
                 type="button"
                 disabled={locked}
-                onClick={() =>
-                  void openScan(entry)
-                }
+                onClick={() => void openScan(entry)}
               >
-                {entry.is_mock
-                  ? "DEMO · "
-                  : ""}
-
-                Scan #{entry.id} ·{" "}
-                {entry.status}
+                {entry.is_mock ? "DEMO · " : ""}
+                Scan #{entry.id} · {entry.status}
 
                 {entry.created_at
                   ? ` · ${new Date(
@@ -537,18 +500,10 @@ export default function ScanReview({
       {hasReview ? (
         <>
           {metadata.is_mock && (
-            <p
-              className="mock-banner"
-              role="note"
-            >
-              <strong>
-                Development mock results.
-              </strong>{" "}
-
-              These are sample foods, not AI
-              observations of your photos.
-              Saved scans and shopping lists
-              stay labeled DEMO.
+            <p className="mock-banner" role="note">
+              <strong>Development mock results.</strong>{" "}
+              These are sample foods, not AI observations
+              of your photos.
             </p>
           )}
 
@@ -567,14 +522,6 @@ export default function ScanReview({
               ` · ${metadata.model_used}`}
           </p>
 
-          <p>
-            Only confirmed items are kept in
-            the saved scan. Unchecked items
-            remain unsaved drafts. Editing
-            an item requires confirmation again.
-          </p>
-
-          {/* Food item review */}
           <fieldset
             disabled={locked}
             className="review-fields"
@@ -583,13 +530,19 @@ export default function ScanReview({
               Review detected food
             </legend>
 
+            {/* FOOD ITEM ROWS */}
             {items.map((item, index) => (
               <div
                 className="review-row"
                 data-stock={item.stock_status}
                 key={item.key}
               >
-                {item.stock_status === "low" && <span className="low-stock-badge">Low stock</span>}
+                {item.stock_status === "low" && (
+                  <span className="low-stock-badge">
+                    Low stock
+                  </span>
+                )}
+
                 <label>
                   Food name {index + 1}
 
@@ -597,14 +550,9 @@ export default function ScanReview({
                     value={item.name}
                     maxLength={100}
                     onChange={(event) =>
-                      editItem(
-                        item.key,
-                        {
-                          name:
-                            event.target.value,
-                          confirmed: false,
-                        }
-                      )
+                      editItem(item.key, {
+                        name: event.target.value,
+                      })
                     }
                   />
                 </label>
@@ -615,22 +563,18 @@ export default function ScanReview({
                   <select
                     value={item.stock_status}
                     onChange={(event) =>
-                      editItem(
-                        item.key,
-                        {
-                          stock_status:
-                            event.target.value as StockStatus,
-                          confirmed: false,
-                        }
-                      )
+                      editItem(item.key, {
+                        stock_status:
+                          event.target.value as StockStatus,
+                      })
                     }
                   >
-                    <option value="low">
-                      Low
-                    </option>
-
                     <option value="available">
                       Available
+                    </option>
+
+                    <option value="low">
+                      Running low
                     </option>
 
                     <option value="unknown">
@@ -639,33 +583,11 @@ export default function ScanReview({
                   </select>
                 </label>
 
-                <label className="confirm-item">
-                  <input
-                    type="checkbox"
-                    checked={item.confirmed}
-                    disabled={
-                      !item.name.trim()
-                    }
-                    onChange={(event) =>
-                      editItem(
-                        item.key,
-                        {
-                          confirmed:
-                            event.target.checked,
-                        }
-                      )
-                    }
-                  />
-
-                  Confirm item {index + 1}
-                </label>
-
+                {/* ONLY DELETE — NO INDIVIDUAL CONFIRM */}
                 <button
                   type="button"
                   className="danger"
-                  aria-label={`Delete item ${
-                    index + 1
-                  }`}
+                  aria-label={`Delete item ${index + 1}`}
                   onClick={() =>
                     deleteReviewItem(item.key)
                   }
@@ -677,12 +599,12 @@ export default function ScanReview({
 
             {items.length === 0 && (
               <p>
-                No items in this review.
-                Add a missing food below.
+                No ingredients remain in this review.
+                Add an ingredient below to continue.
               </p>
             )}
 
-            {/* Add missing food */}
+            {/* ADD MISSING FOOD */}
             <form
               className="add-review-item"
               onSubmit={(event) => {
@@ -696,26 +618,24 @@ export default function ScanReview({
                 <input
                   value={newName}
                   maxLength={100}
-                  onChange={(event) => {
-                    setNewName(
-                      event.target.value
-                    );
-                    onReviewSaved?.(dirty || event.target.value.trim() ? null : (confirmed.length > 0 ? scan?.id ?? null : null));
-                  }}
                   placeholder="e.g. Tomatoes"
+                  onChange={(event) => {
+                    setNewName(event.target.value);
+                  }}
                 />
               </label>
 
               <label>
-                Missing food stock status
+                Stock status
 
                 <select
+                  aria-label="Missing food stock status"
                   value={newStatus}
-                  onChange={(event) =>
+                  onChange={(event) => {
                     setNewStatus(
                       event.target.value as StockStatus
-                    )
-                  }
+                    );
+                  }}
                 >
                   <option value="unknown">
                     Unknown
@@ -726,7 +646,7 @@ export default function ScanReview({
                   </option>
 
                   <option value="low">
-                    Low
+                    Running low
                   </option>
                 </select>
               </label>
@@ -742,58 +662,50 @@ export default function ScanReview({
               </button>
             </form>
 
-            <p>
-              {confirmed.length} of{" "}
-              {items.length} items confirmed
+            {/* REVIEW SUMMARY */}
+            <p className="review-summary">
+              {items.length} ingredient(s) ready for review
               {" · "}
-              {confirmedLow} low-stock
+              {lowStockCount} running low
             </p>
 
-            {/* Review actions */}
+
+
+            {/* SAVE AND SHOPPING LIST ACTIONS */}
             <div className="review-actions">
               <button
                 type="button"
-                disabled={
-                  !dirty ||
-                  (!scan &&
-                    confirmed.length === 0)
-                }
-                onClick={() =>
-                  void save()
-                }
+                disabled={!canSave}
+                onClick={() => void save()}
               >
-                Save confirmed items
+                {busy
+                  ? "Saving..."
+                  : "Save Confirmed Items"}
               </button>
 
               <button
                 type="button"
                 disabled={
+                  locked ||
                   !scan ||
                   dirty ||
-                  confirmedLow === 0
+                  lowStockCount === 0
                 }
                 onClick={() =>
                   void createShoppingList()
                 }
               >
-                Create shopping list from
-                low-stock items
+                Create Shopping List from Low-Stock Items
               </button>
             </div>
           </fieldset>
 
-          <p className="review-hint">
-            Save before creating a list.
-            Each scan creates one shopping
-            list snapshot. Later review edits
-            do not overwrite that list.
-            You can edit the list below.
-          </p>
+
         </>
       ) : (
         <p>
-          Analyze fridge photos to start
-          a review, or open a saved scan.
+          Scan your fridge to discover ingredients,
+          or open a previously saved scan.
         </p>
       )}
 
@@ -804,10 +716,7 @@ export default function ScanReview({
       )}
 
       {error && (
-        <p
-          role="alert"
-          className="error"
-        >
+        <p role="alert" className="error">
           {error}
         </p>
       )}
@@ -823,3 +732,4 @@ export default function ScanReview({
     </section>
   );
 }
+

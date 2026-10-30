@@ -5,6 +5,7 @@ for (const width of [1440,390]) {
   const payloads:Record<string,unknown>[]=[];
   await page.route('**/api/**',async route=>{
    const path=new URL(route.request().url()).pathname;
+   if(path==='/api/recipes/inventory')return route.fulfill({json:{available:['Tomato'],low:[],unknown:[]}});
    if(path==='/api/health')return route.fulfill({json:{mock_vision:true}});
    if(path==='/api/scans')return route.fulfill({json:[{id:88,status:'reviewed',is_mock:false,model_used:'test'}]});
    if(path==='/api/scans/88/items')return route.fulfill({json:[{id:1,name:'Tomato',confirmed:true,stock_status:'available'}]});
@@ -17,17 +18,17 @@ for (const width of [1440,390]) {
   });
   await page.goto('/');await page.getByRole('navigation').getByRole('link',{name:'Recipes',exact:true}).click();
   await page.getByRole('group',{name:'Dietary preference'}).getByText('Vegan',{exact:true}).click();
-  await page.getByRole('group',{name:'Cuisine',exact:true}).getByText('South Indian',{exact:true}).click();
+  await page.getByLabel('Cuisine',{exact:true}).selectOption('South Indian');
   await page.getByRole('group',{name:'Spice level'}).getByText('Mild',{exact:true}).click();
   await page.getByLabel('Servings',{exact:true}).fill('3');await page.getByLabel('Maximum cooking time',{exact:true}).selectOption('15');
   await page.getByPlaceholder('e.g. peanuts, shellfish, mushrooms').fill('peanuts');
   expect(payloads).toHaveLength(0);
-  await page.getByRole('button',{name:'Generate Recipes'}).click();await expect(page.getByRole('alert')).toContainText('Try again shortly');
-  expect(payloads[0]).toEqual({scan_id:88,servings:3,dietary_preferences:'Vegan',cuisine:'South Indian',spice_level:'Mild',excluded_ingredients:'peanuts',max_time:15});
-  await page.getByRole('button',{name:'Generate Recipes'}).click();await expect(page.getByText('Mild tomato curry')).toBeVisible();
+  await page.getByRole('button',{name:'Refresh Suggestions'}).click();await expect(page.getByRole('alert')).toContainText('Try again shortly');
+  expect(payloads[0]).toEqual({mode:"have",servings:3,dietary_preferences:'Vegan',cuisine:'South Indian',spice_level:'Mild',excluded_ingredients:'peanuts',max_time:15});
+  await page.getByRole('button',{name:'Refresh Suggestions'}).click();await expect(page.getByText('Mild tomato curry')).toBeVisible();
   await expect(page.getByRole('radio',{name:'Vegan',exact:true})).toBeChecked();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
-  await page.locator('.recipe-preferences').screenshot({style:".sidebar, .skip-link { visibility: hidden !important; }",path:`../test-results/recipe-preferences-${width}.png`});
+  await page.locator('.recipe-preferences').screenshot({style:".sidebar, .skip-link { visibility: hidden !important; }",path:`../test-results/screenshots/recipe-preferences-${width}.png`});
  });
 }
 

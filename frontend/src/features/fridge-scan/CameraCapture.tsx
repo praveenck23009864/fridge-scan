@@ -1,5 +1,5 @@
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "./CameraCapture.css";
 
 export type FridgePhoto = {
@@ -11,6 +11,7 @@ export type FridgePhoto = {
 
 type Props = {
   onPhotosChange: (photos: FridgePhoto[]) => void;
+  active?: boolean;
 };
 
 const MAX_PHOTOS = 3;
@@ -23,6 +24,7 @@ const SAMPLES = [
 
 export default function CameraCapture({
   onPhotosChange,
+  active = true,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -41,7 +43,7 @@ export default function CameraCapture({
     onPhotosChange(photos);
   }, [photos, onPhotosChange]);
 
-  function stopCamera() {
+  const stopCamera = useCallback(() => {
     operationRef.current += 1;
     streamRef.current?.getTracks().forEach(
       (track) => track.stop()
@@ -55,7 +57,13 @@ export default function CameraCapture({
 
     setCameraActive(false);
     setRetakeIndex(null);
-  }
+  }, []);
+
+  useEffect(() => {
+    if (!active) return;
+    // Navigation keeps photos mounted, but must release a hidden camera stream.
+    return () => {stopCamera(); setBusy(false);};
+  }, [active, stopCamera]);
 
   useEffect(() => {
     mountedRef.current = true;

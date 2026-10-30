@@ -4,7 +4,7 @@ Audited against the scope supplied in the conversation. No separate grading rubr
 
 | Requirement | Final status | Implementation | Test evidence |
 |---|---|---|---|
-| Camera capture, 1–3 photos | Tested synthetically; physical hardware unverified | frontend/src/components/CameraCapture.tsx: getUserMedia, canvas JPEG capture, MAX_PHOTOS | frontend/e2e/assignment.spec.ts: repeated synthetic video capture and one Chromium fake-camera capture |
+| Camera capture, 1–3 photos | Tested synthetically; physical hardware unverified | frontend/src/features/fridge-scan/CameraCapture.tsx: getUserMedia, canvas JPEG capture, MAX_PHOTOS | frontend/e2e/assignment.spec.ts: repeated synthetic video capture and one Chromium fake-camera capture |
 | Live preview | Tested synthetically | CameraCapture.tsx: video.srcObject, play(), labelled preview | assignment.spec.ts asserts visible preview and videoWidth > 0 |
 | Retake/delete | Tested synthetically | CameraCapture.tsx replaces selected photo, revokes old URL, stops active stream before deletion | assignment.spec.ts checks replacement URL, unchanged count, URL revocation, individual and clear-all deletion |
 | Camera permission/missing camera | Tested with injected errors; actual OS prompt unverified | CameraCapture.openCamera handles NotAllowedError, NotFoundError, missing media API | assignment.spec.ts permission-denied and missing-camera cases verify sample fallback |

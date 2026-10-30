@@ -9,7 +9,7 @@ test.beforeEach(async({page})=>{
   navigator.mediaDevices.getUserMedia=async options=>{const stream=await get(options);window.auditStreams.push(stream);return stream;};
   const revoke=URL.revokeObjectURL.bind(URL);URL.revokeObjectURL=url=>{window.auditRevoked.push(url);revoke(url);};
  });
- await page.goto('/');
+ await page.goto('/scan');
 });
 test('synthetic video preview capture retake delete and stream shutdown',async({page})=>{
  // A deterministic browser MediaStream avoids this Chromium build's fake device
@@ -76,4 +76,16 @@ test('Chromium fake camera opens and captures one real video frame',async({page}
  await expect(page.getByText('Photos selected: 1/3')).toBeVisible();
  await expect(page.getByAltText('Fridge photo 1')).toBeVisible();
  expect(await page.evaluate(()=>window.auditStreams.every(s=>s.getTracks().every(t=>t.readyState==='ended')))).toBe(true);
+});
+
+test('leaving the scan page stops the camera and preserves selected photos',async({page})=>{
+ await page.getByRole('button',{name:'No camera? Use Sample Photos'}).click();
+ await page.locator('.photo-card').first().getByRole('button',{name:'Delete',exact:true}).click();
+ await page.getByRole('button',{name:'Open Camera',exact:true}).click();
+ await expect(page.getByLabel('Live camera preview')).toBeVisible();
+ await page.getByRole('navigation').getByRole('link',{name:'Dashboard',exact:true}).click();
+ expect(await page.evaluate(()=>window.auditStreams.every(s=>s.getTracks().every(t=>t.readyState==='ended')))).toBe(true);
+ await page.getByRole('navigation').getByRole('link',{name:'Scan Fridge',exact:true}).click();
+ await expect(page.getByText('Photos selected: 2/3')).toBeVisible();
+ await expect(page.getByRole('button',{name:'Open Camera',exact:true})).toBeEnabled();
 });

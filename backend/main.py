@@ -249,6 +249,7 @@ def add_shopping_item(
         shopping_list_id=list_id,
         name=data.name,
         quantity=data.quantity,
+        category=data.category,
         completed=False,
     )
 
@@ -337,12 +338,29 @@ async def analyze_fridge(
 
 
 
+def recipe_inventory(db: Session) -> dict:
+    scan = db.query(Scan).filter_by(status="reviewed").order_by(Scan.created_at.desc(), Scan.id.desc()).first()
+    snapshot = {"scan_id": scan.id if scan else None, "available": [], "low": [], "unknown": []}
+    if scan:
+        for item in db.query(DetectedItem).filter_by(scan_id=scan.id, confirmed=True).all():
+            status = item.stock_status if item.stock_status in ("available", "low") else "unknown"
+            if item.name.strip() and item.name not in snapshot[status]:
+                snapshot[status].append(item.name)
+    return snapshot
+
+
+@app.get("/api/recipes/inventory")
+def get_recipe_inventory(db: Session = Depends(get_db)):
+    return recipe_inventory(db)
+
+
 class RecipeGenerateRequest(BaseModel):
-    scan_id: int = Field(gt=0)
+    scan_id: int | None = Field(default=None, gt=0)
+    mode: Literal["have", "almost"] = "have"
     servings: int = Field(default=2, ge=1, le=12)
     dietary_preferences: str = Field(default="", max_length=300)
     max_time: int | None = Field(default=None, ge=1, le=600)
-    cuisine: Literal["Any", "Indian", "South Indian", "Chinese", "Italian", "Mexican", "Thai"] = "Any"
+    cuisine: Literal["Any", "Indian", "South Indian", "Chinese", "Italian", "Mexican", "Thai", "american"] = "Any"
     spice_level: Literal["Mild", "Medium", "Spicy"] = "Medium"
     excluded_ingredients: str = Field(default="", max_length=300)
 
@@ -352,26 +370,10 @@ async def generate_recipe_suggestions(
     data: RecipeGenerateRequest,
     db: Session = Depends(get_db),
 ):
-    scan = db.get(Scan, data.scan_id)
-
-    if scan is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Scan not found",
-        )
-
-    confirmed_items = (
-        db.query(DetectedItem)
-        .filter(
-            DetectedItem.scan_id == data.scan_id,
-            DetectedItem.confirmed.is_(True),
-        )
-        .all()
-    )
-
-    ingredients = [
-        item.name for item in confirmed_items if item.name and item.name.strip()
-    ]
+    if data.scan_id is not None and db.get(Scan, data.scan_id) is None:
+        raise HTTPException(status_code=404, detail="Scan not found")
+    snapshot = recipe_inventory(db)
+    ingredients = snapshot["available"]
 
     if not ingredients:
         raise HTTPException(
@@ -380,7 +382,7 @@ async def generate_recipe_suggestions(
         )
 
     try:
-        return await run_in_threadpool(
+        result = await run_in_threadpool(
             generate_recipes,
             ingredients,
             data.servings,
@@ -389,7 +391,9 @@ async def generate_recipe_suggestions(
             data.cuisine,
             data.spice_level,
             data.excluded_ingredients,
+            data.mode,
         )
+        return {**result, "inventory": snapshot}
     except RecipeServiceError as exc:
         raise HTTPException(
             status_code=exc.status_code,
@@ -411,3 +415,27 @@ def add_suggested_items(list_id: int, data: AddFridgeSuggestions, db: Session = 
     if result is None:
         raise HTTPException(404, 'Shopping list not found')
     return result
+
+
+from schemas import BulkShoppingItems
+from sqlalchemy import text
+
+@app.post('/api/shopping-lists/{list_id}/bulk-items', response_model=ShoppingListResponse)
+def bulk_shopping_items(list_id: int, data: BulkShoppingItems, db: Session = Depends(get_db)):
+    try:
+        db.execute(text('BEGIN IMMEDIATE'))
+        target = db.get(ShoppingList, list_id)
+        if target is None:
+            raise HTTPException(404, 'Shopping list not found')
+        names = {crud.normalized_food_name(i.name) for i in target.items}
+        for incoming in data.items:
+            key = crud.normalized_food_name(incoming.name)
+            if key not in names:
+                db.add(ShoppingListItem(shopping_list_id=list_id, **incoming.model_dump(), completed=False))
+                names.add(key)
+        db.commit()
+        db.expire(target, ['items'])
+        return target
+    except Exception:
+        db.rollback()
+        raise

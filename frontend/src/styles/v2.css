@@ -1,0 +1,142 @@
+/* Fridgely's single light palette. Compatibility aliases keep component styles consistent. */
+:root{--canvas:#F8FAFC;--card:#FFFFFF;--ink:#172B3A;--accent:#157347;--border:#E2E8F0;--warning:#E9A23B;--danger:#B42318;--muted:#526171;--mint:#EDF6F0;--navy:var(--accent);color-scheme:light}
+body,.workspace{background:var(--canvas);color:var(--ink)}
+.sidebar,.panel,.camera-panel,.recipe-section,.summary-card,.list-card,.recipe-card{background:var(--card);color:var(--ink);border-color:var(--border)}
+h1,h2,h3,h4,.brand,.sidebar nav a,.topbar{color:var(--ink)}
+.workspace :is(p,small,label,legend,th,td,h5,.eyebrow,.nav-caption,.section-tag,.list-progress,.recipe-meta,.optional-label,strong){color:var(--ink)}
+.workspace :is(.recipe-preferences,.preference-chip span,.suggestion-option,.upload-zone,.camera-status,.review-item){background:var(--card);color:var(--ink);border-color:var(--border)}
+.workspace :is(.welcome-card,.fridge-suggestions,.sidebar-tip,.art-label,.summary-icon,.review-source,.mock-banner){background:var(--mint);color:var(--ink)}
+.workspace :is(.sidebar-footer,.workspace-badge){background:var(--card);color:var(--muted)}
+.workspace a{color:var(--accent)}
+.workspace :is(button,.button-link){background:var(--accent);color:#fff;border:1px solid var(--accent)}
+.workspace :is(button,.button-link):hover{background:#105C38;border-color:#105C38}
+.workspace button:disabled{background:var(--border);color:var(--muted);border-color:var(--border);cursor:not-allowed;box-shadow:none}
+.workspace input:not([type=checkbox]):not([type=radio]),.workspace select,.workspace textarea{background:var(--card);color:var(--ink);border:1px solid #8998A6}
+.workspace input::placeholder,.workspace textarea::placeholder{color:var(--muted);opacity:1}
+.workspace input[type=checkbox],.workspace input[type=radio],.list-progress progress{accent-color:var(--accent)}
+.workspace :is(button,input,select,textarea,a,summary):focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.workspace :is(.danger,.camera-delete){background:#FFF4F2;color:var(--danger);border-color:#F3C7C3}
+.workspace :is(.danger,.camera-delete):hover{background:#FFE6E2;color:var(--danger);border-color:var(--danger)}
+.workspace :is([role=alert],.error,.recipe-error,.camera-error){background:#FFF4F2;color:var(--danger);border-color:#F3C7C3}
+.workspace :is(.low-badge,.suggestion-option small){background:#FFF0D6;color:#704300;padding:3px 8px;border-radius:6px;font-size:12px}
+.stock-badge{color:var(--muted);font-size:12px;text-transform:capitalize}
+.workspace .preference-chip input:checked+span{background:var(--accent);color:#fff;border-color:var(--accent)}
+.workspace .secondary-button{background:var(--card);color:var(--ink);border-color:#8998A6;box-shadow:none}
+.workspace .secondary-button:hover{background:var(--canvas)}
+.workspace .icon-button{width:34px;height:34px;min-height:34px;padding:7px;border-radius:7px;background:var(--card);color:var(--ink);border:1px solid var(--border);box-shadow:none;flex-shrink:0}
+.workspace .icon-button:hover{background:var(--mint);border-color:var(--accent)}
+.workspace .icon-button.danger{color:var(--danger)}
+.workspace .icon-button.danger:hover{background:#FFF4F2;border-color:var(--danger)}
+.workspace .compact-button{min-height:36px;padding:7px 11px;font-size:13px;white-space:nowrap}
+.sidebar-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:16px}
+.sidebar-header .brand{display:flex;gap:7px;align-items:center;font-size:22px;letter-spacing:-.7px;margin:0;min-width:0;color:var(--ink)}
+.sidebar-header .brand .brand-name{font-weight:750;margin:0}
+.sidebar-header .brand-mark{width:32px;height:32px;margin:0;flex-shrink:0}
+.sidebar nav a{gap:10px;color:var(--muted);border-radius:8px}
+.sidebar nav a svg{flex-shrink:0}
+.sidebar nav a[aria-current]{background:var(--mint);color:var(--accent);box-shadow:inset 3px 0 var(--accent);font-weight:700}
+.sidebar-collapsed .sidebar{width:80px;padding:22px 14px}
+.sidebar-collapsed .app{margin-left:80px;width:calc(100% - 80px)}
+.sidebar-collapsed .sidebar-header{flex-direction:column}
+.sidebar-collapsed :is(.brand-name,.nav-label,.nav-caption,.sidebar-tip,.sidebar-footer){display:none}
+.sidebar-collapsed .sidebar nav a{justify-content:center;padding:12px}
+.inventory-summary{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 16px;margin:12px 0;font-size:12px}
+.inventory-panel{padding:20px;margin-top:0}
+.inventory-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.inventory-heading h2{font-size:22px}
+.inventory-panel>p.inventory-caption{font-size:12px;color:var(--muted);margin:6px 0 12px}
+.inventory-toolbar{display:flex;align-items:end;flex-wrap:wrap;gap:10px;margin:12px 0}
+.inventory-toolbar label{display:grid;gap:4px;font-size:12px;flex:1;min-width:120px}
+.inventory-toolbar input,.inventory-toolbar select{width:100%;padding:8px 10px}
+.inventory-toolbar button{font-size:12px;min-height:38px;padding:8px 10px}
+.inventory-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(270px,100%),1fr));gap:12px}
+.inventory-item{padding:14px;border:1px solid var(--border);border-radius:10px;min-width:0}
+.inventory-card-overview{display:flex;gap:12px;align-items:start}
+.inventory-card-overview>div{min-width:0}
+.inventory-item h3{font-size:16px;overflow-wrap:anywhere;margin-bottom:6px}
+.inventory-item p{font-size:13px;margin:4px 0}
+.inventory-item small{display:block;color:var(--muted);font-size:11px}
+.inventory-actions{display:flex;gap:6px;align-items:center}
+.inventory-item>.inventory-actions{margin-top:10px;justify-content:flex-end}
+.table-scroll{overflow-x:auto;max-width:100%;border:1px solid var(--border);border-radius:10px}
+.inventory-panel table{border-collapse:collapse;width:100%;font-size:13px}
+.inventory-panel th,.inventory-panel td{padding:10px;text-align:left;border-bottom:1px solid var(--border);vertical-align:middle}
+.inventory-panel th{background:var(--canvas);font-size:12px;white-space:nowrap}
+.inventory-panel td{overflow-wrap:anywhere}
+.inventory-panel .inventory-edit-row>td{padding:12px;background:var(--canvas)}
+.inventory-editor{display:block;width:100%;margin:12px 0 0;padding:14px;background:var(--canvas);border:1px solid var(--border);border-radius:8px}
+.inventory-edit-row .inventory-editor{margin:0;border:0;padding:4px;max-width:calc(100vw - 80px)}
+.inventory-editor fieldset{border:0;min-width:0;padding:0;margin:0}
+.inventory-editor legend{font-size:13px;font-weight:650;padding:0;margin-bottom:8px}
+.inventory-editor-fields{display:grid;grid-template-columns:minmax(140px,2fr) minmax(110px,1fr) minmax(140px,1fr);gap:10px}
+.inventory-editor label{display:grid;gap:4px;font-size:12px;min-width:0}
+.inventory-editor input,.inventory-editor select{width:100%;min-width:0;padding:8px}
+.inventory-editor-actions{display:flex;gap:8px;margin-top:12px}
+.inventory-editor-actions button{min-height:36px;padding:7px 14px;font-size:13px}
+.inventory-editor [role=alert]{margin-top:10px;padding:8px;border-radius:6px}
+.inventory-item .inventory-editor-fields{grid-template-columns:1fr}
+.recipe-shopping-option{display:flex;gap:12px;padding:10px}.recipe-card fieldset{min-width:0}.recipe-card select{max-width:100%}
+.shopping-item{flex-wrap:wrap}.shopping-item label{flex:1;min-width:110px}.processing-steps{padding:20px 36px;background:var(--mint);border-radius:12px}.processing-steps li{margin:8px 0}
+@media(max-width:1100px) and (min-width:761px){.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sidebar{width:220px;padding:22px 14px}.app{margin-left:220px;width:calc(100% - 220px);padding:0 20px}.inventory-editor-fields{grid-template-columns:1fr}}
+@media(max-width:760px){
+ .sidebar,.sidebar-collapsed .sidebar{width:100%;padding:10px 16px}.sidebar-header,.sidebar-collapsed .sidebar-header{flex-direction:row;margin:0}.sidebar-collapsed .brand-name{display:inline}
+ .collapse-toggle{display:none!important}.sidebar nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);padding:7px 4px calc(7px + env(safe-area-inset-bottom));z-index:20;border-top:1px solid var(--border);gap:2px}
+ .sidebar nav a,.sidebar-collapsed .sidebar nav a{display:flex;flex-direction:column;justify-content:center;gap:3px;flex:1;min-width:0;padding:7px 3px;font-size:10px;line-height:1.2;text-align:center;white-space:normal;min-height:56px}
+ .sidebar nav a .nav-label,.sidebar-collapsed .sidebar nav a .nav-label{display:block;font-size:10px}.sidebar nav a[aria-current]{box-shadow:inset 0 2px var(--accent)}
+ .sidebar-collapsed .app,.app{margin:0;width:100%;padding:0 14px 90px}.inventory-panel{padding:14px}.inventory-heading h2{font-size:20px}
+ .inventory-toolbar label{flex-basis:calc(50% - 10px);min-width:110px}.inventory-toolbar label:first-child{flex-basis:100%}.inventory-toolbar>button{width:100%}
+ .inventory-editor-fields{grid-template-columns:1fr}.inventory-summary{display:block}.inventory-cards{grid-template-columns:1fr}.inventory-edit-row .inventory-editor{max-width:calc(100vw - 76px)}
+ section[id]{scroll-margin-top:75px}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+.sidebar nav a .nav-label{font-size:14px;line-height:1.3}
+.sidebar-tip>svg{display:block;margin-bottom:12px}
+.low-badge,.stock-badge{white-space:nowrap}
+.inventory-editor{scroll-margin-top:80px;scroll-margin-bottom:100px}
+.table-scroll:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+@media(max-width:760px){.sidebar nav a .nav-label{font-size:10px}}
+
+/* Separate pages, compact dashboard, and a welcome illustration in normal flow. */
+.app:focus{outline:none}
+.app>div>.inventory-panel{margin-top:24px}
+.inventory-heading h1{font-size:24px;letter-spacing:-.5px}
+.inventory-panel table{min-width:650px}
+.inventory-panel td:nth-child(2){min-width:140px}
+.inventory-panel td:nth-child(4){min-width:105px}
+.inventory-panel td:nth-child(5){white-space:nowrap}
+.inventory-panel>.inventory-source,.inventory-panel>.inventory-count{font-size:12px;margin:8px 0;color:var(--muted)}
+.dashboard>.welcome-card{margin:24px 0 0;gap:24px}
+.welcome-card h1{font-size:30px;line-height:1.25;letter-spacing:-.8px;margin-bottom:14px}
+.welcome-card>div:first-child{flex:1;min-width:0}
+.dashboard .food-art{position:relative;right:auto;bottom:auto;flex:0 1 230px;width:35%;opacity:1}
+.dashboard-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:28px 0 18px}
+.dashboard-heading h2{font-size:20px}
+.dashboard-heading p{font-size:13px;margin-top:5px;color:var(--muted)}
+.dashboard-heading .button-link{white-space:nowrap;font-size:13px}
+.summary-card p{margin-top:14px}
+.summary-icon{padding:6px}
+.dashboard-details{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:24px}
+.dashboard-details>.panel{margin-bottom:0}
+.dashboard-details time{font-size:13px;color:var(--muted)}
+.dashboard-details .text-link{margin-top:8px;gap:8px}
+.dashboard-low-stock{list-style:none;padding:0;margin:12px 0;display:grid;gap:10px}
+.dashboard-low-stock li{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.dashboard-low-stock li>span:first-child{overflow-wrap:anywhere;min-width:0}
+.inventory-preview{margin-top:24px}
+.inventory-preview .text-link{margin-top:0;gap:7px;flex-shrink:0}
+.inventory-preview .inventory-caption{font-size:12px;color:var(--muted)}
+.preview-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.preview-item{display:flex;gap:12px;align-items:center;min-width:0;padding:12px;background:var(--canvas);border:1px solid var(--border);border-radius:10px}
+.preview-item>div{min-width:0}
+.preview-item h3{font-size:14px;margin-bottom:7px;overflow-wrap:anywhere}
+.preview-item .food-image{width:64px;height:64px}
+@media(max-width:1100px){.preview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dashboard-details{grid-template-columns:1fr}.dashboard .food-art{flex-basis:180px}.welcome-card h1{font-size:27px}}
+@media(max-width:900px) and (min-width:761px){.dashboard>.welcome-card{flex-wrap:wrap}.dashboard .food-art{flex:1;min-width:150px}.welcome-card>div:first-child{min-width:230px}}
+@media(max-width:760px){
+ .dashboard>.welcome-card{flex-direction:column;align-items:flex-start;padding:24px;gap:20px}
+ .dashboard .food-art{align-self:center;flex:auto;width:auto;max-width:100%}
+ .dashboard .plate{width:160px;height:160px}.dashboard .art-label{display:block}.welcome-card h1{font-size:26px}
+ .dashboard-heading{flex-wrap:wrap}.dashboard-details{gap:14px}.preview-grid{grid-template-columns:1fr}
+ .inventory-preview .inventory-heading{align-items:flex-start;flex-direction:column}.inventory-preview .inventory-heading h2{font-size:20px}
+ .app>div>.inventory-panel{margin-top:20px}.inventory-heading h1{font-size:21px}
+}

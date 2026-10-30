@@ -45,6 +45,8 @@ def initialize_database(bind=engine):
     """Create missing tables and add review metadata without replacing user data."""
     Base.metadata.create_all(bind=bind)
     additions = {
+        "detected_items": {"category": "VARCHAR NOT NULL DEFAULT 'Other'"},
+        "shopping_list_items": {"category": "VARCHAR NOT NULL DEFAULT 'Other'"},
         "scans": {
             "is_mock": "BOOLEAN NOT NULL DEFAULT 0",
             "model_used": "VARCHAR",
